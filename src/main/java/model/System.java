@@ -1,0 +1,81 @@
+package model;
+
+import model.packets.BigPacket;
+import model.packets.ProtectedPacket;
+import model.packets.SecretPacket1;
+import model.packets.SecretPacket2;
+import model.ports.InputPort;
+import model.ports.OutputPort;
+
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public abstract class System {
+    protected ArrayList<Packet> packets;
+    protected List<InputPort> inputPorts;
+    protected List<OutputPort> outputPorts;
+    protected Point location;
+    protected SystemManager systemManager;
+    protected int id;
+    protected int bigPacketCount;
+    public System(Point location, List<InputPort> inputPorts, List<OutputPort> outputPorts, SystemManager systemManager, int id) {
+        packets = new ArrayList<>();
+        this.location = location;
+        this.inputPorts = inputPorts;
+        this.outputPorts = outputPorts;
+        this.systemManager = systemManager;
+        this.id = id;
+    }
+    public void handleBigPacketArrival(BigPacket bigPacket) {
+        for(Packet packet : packets) {
+            systemManager.removePacket(packet);
+        }
+        packets.clear();
+        packets.add(bigPacket);
+        bigPacketCount++;
+        if(bigPacketCount==3) {
+            systemManager.removeSystem(this);
+        }
+    }
+    public void addPacket(Packet packet) {
+        packets.add(packet);
+    }
+    public void removePacket(Packet packet) {
+        int id=packet.getId();
+        for(Packet p : packets) {
+            if(p.getId()==id) {
+                packets.remove(p);
+                break;
+            }
+        }
+    }
+    public List<OutputPort> getOutputPorts() {return outputPorts;}
+    public List<InputPort> getInputPorts() {return inputPorts;}
+    public int countPackets() {
+        return packets.size();
+    }
+    public ArrayList<Packet> getPackets() {return packets;}
+    public abstract void sendPacket();
+    public abstract void receivePacket(Packet packet);
+
+    public boolean isCompatible(Packet p, OutputPort op) {
+        if (p instanceof ProtectedPacket
+                || p instanceof SecretPacket1
+                || p instanceof SecretPacket2) {
+            return true;
+        }
+        return op.getType() == p.getType();
+    }
+
+    public OutputPort firstFreePort(ArrayList<OutputPort> ports) {
+        for (OutputPort op : ports) {
+            Line l = op.getLine();
+            if (l != null && !l.isOccupied()) {
+                return op;
+            }
+        }
+        return null;
+    }
+    public Point getLocation() {return location;}
+}
