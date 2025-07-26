@@ -31,7 +31,7 @@ public class GameController {
 
         /* 3 ▸ loop: update model, then repaint canvas */
         timer = new Timer(16, e -> {
-//            model.update();   // physics, packet motion, etc.
+            model.update();   // physics, packet motion, etc.
             panel.repaint();  // paint new model state
         });
         timer.start();

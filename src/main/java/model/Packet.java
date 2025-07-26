@@ -9,15 +9,12 @@ public abstract class Packet {
     protected  Line line;
     protected Type type;
     protected int size;
+    protected float progress=0.1f;
     protected float speed;
     protected float acceleration;
     protected Point point;
     protected boolean isMoving;
     protected boolean trojan;
-
-
-
-
     public Packet() {
         system=null;
         line=null;
@@ -66,6 +63,14 @@ public abstract class Packet {
                 Math.round(a.y + (b.y - a.y) * t)
         );
     }
+    public float getProgress()            { return progress; }
+    public void  setProgress(float value) { progress = value; }
+
+    public float getSpeed()               { return speed; }
+    public void  setSpeed(float s)        { speed = s; }
+
+    public float getAcceleration()        { return acceleration; }
+    public void  setAcceleration(float a) { acceleration = a; }
 //    public void isProtected() {
 //        size=5;
 //        protection=true;

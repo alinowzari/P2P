@@ -6,6 +6,7 @@ import model.ports.OutputPort;
 import javax.lang.model.type.ArrayType;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Comparator;
 
 public class Line {
@@ -41,7 +42,7 @@ public class Line {
     public Packet getMovingPacket() {
         return movingPacket;
     }
-    public void addBendPoint(Point footA, Point middle, Point footB) {
+    public BendPoint addBendPoint(Point footA, Point middle, Point footB) {
 
         if (bendPoints.size() >= 3)
             throw new IllegalStateException("max 3 bends already present");
@@ -81,11 +82,14 @@ public class Line {
             throw new IllegalArgumentException(
                     "New bend must lie entirely before the first bend or after the last bend");
         }
+//        bendPoints.add(new BendPoint(footA, middle, footB));
+//        bendPoints.sort(
+//                Comparator.comparingDouble(bp -> projectionT(bp.getMiddle())));
 
-        /* ----- all good: add and keep list ordered ------------------------- */
-        bendPoints.add(new BendPoint(footA, middle, footB));
-        bendPoints.sort(
-                Comparator.comparingDouble(bp -> projectionT(bp.getMiddle())));
+        BendPoint bp = new BendPoint(footA, middle, footB);
+        bendPoints.add(bp);
+        bendPoints.sort(Comparator.comparingDouble(bpp -> projectionT(bpp.getMiddle())));
+        return bp;
     }
     public void removeBendPoint(BendPoint bendPoint) {bendPoints.remove(bendPoint);}
     public ArrayList<Point> getPath(int smoothness) {
@@ -120,7 +124,10 @@ public class Line {
 
         return path;
     }
-
+    public BendPoint getLastBend() {
+        return bendPoints.isEmpty() ? null
+                : bendPoints.get(bendPoints.size() - 1);
+    }
     /* --------------------------------------------------------------
      * helper: projection parameter t  (distance from start along OS)
      * -------------------------------------------------------------- */
@@ -131,5 +138,23 @@ public class Line {
         double wx = p.x - O.x, wy = p.y - O.y;
         double L2 = vx*vx + vy*vy;
         return L2 == 0 ? 0 : (vx*wx + vy*wy) / Math.sqrt(L2); // scalar distance
+    }
+    public boolean hit(Point p, double tol) {
+        List<Point> pts = getPath(0);
+        for (int i = 0; i < pts.size()-1; i++) {
+            if (ptToSegmentDist(p, pts.get(i), pts.get(i+1)) <= tol)
+                return true;
+        }
+        return false;
+    }
+    private double ptToSegmentDist(Point p, Point a, Point b) {
+        double vx = b.x - a.x, vy = b.y - a.y;
+        double wx = p.x - a.x, wy = p.y - a.y;
+        double len2 = vx*vx + vy*vy;
+        double t = (len2==0) ? 0 : (vx*wx + vy*wy)/len2;
+        t = Math.max(0, Math.min(1, t));
+        double dx = a.x + t*vx - p.x;
+        double dy = a.y + t*vy - p.y;
+        return Math.hypot(dx, dy);
     }
 }

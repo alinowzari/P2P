@@ -29,7 +29,7 @@ public class GamePanel extends JPanel {
 
     /* dashed rubber-band preview during drag */
     private Point previewA, previewB;
-
+    private Point hMid, hA, hB;
     public GamePanel(SystemManager model) {
         this.model = model;
         setBackground(Color.WHITE);
@@ -40,8 +40,15 @@ public class GamePanel extends JPanel {
     public void showPreview(Point a, Point b) { previewA = a; previewB = b; repaint(); }
     public void hidePreview() { previewA = previewB = null; repaint(); }
 
-    public SystemManager getModel() { return model; }
-
+//    public SystemManager getModel() { return model; }
+    public void setHandles(Point mid, Point a, Point b) {
+        this.hMid = mid; this.hA = a; this.hB = b;
+        repaint();
+    }
+    public void clearHandles() {
+        hMid = hA = hB = null;
+        repaint();
+    }
     /* =========================================================== */
 
     @Override protected void paintComponent(Graphics g) {
@@ -55,7 +62,7 @@ public class GamePanel extends JPanel {
             for (Line l : model.allLines) {
                 g2.setStroke(new BasicStroke(2));
                 g2.setColor(Color.BLACK);
-                List<Point> pts = l.getPath(0);
+                List<Point> pts = l.getPath(6);
                 for (int i = 0; i < pts.size() - 1; i++) {
                     Point a = pts.get(i), b = pts.get(i + 1);
                     g2.drawLine(a.x, a.y, b.x, b.y);
@@ -73,6 +80,16 @@ public class GamePanel extends JPanel {
         /* 3 ▸ systems & ports */
         for (var sys : model.getAllSystems()) {
             drawSystem(g2, sys);
+        }
+        /* 2b ▸ draw bend handles */
+        if (hMid != null) {
+            g2.setColor(Color.YELLOW);
+            g2.fillOval(hMid.x-4, hMid.y-4, 8, 8);
+        }
+        if (hA != null && hB != null) {
+            g2.setColor(Color.RED);
+            g2.fillOval(hA.x-3, hA.y-3, 6, 6);
+            g2.fillOval(hB.x-3, hB.y-3, 6, 6);
         }
     }
 
@@ -100,14 +117,22 @@ public class GamePanel extends JPanel {
         paintPorts(g2, sys.getOutputPorts(), x0, y0, false);
     }
 
-    private void paintPorts(Graphics2D g2, List<? extends Port> ports,
-                            int x0, int y0, boolean inputs) {
+    private void paintPorts(Graphics2D g2,
+                            List<? extends Port> ports,
+                            int x0, int y0,
+                            boolean inputs)
+    {
         int n = ports.size();
         for (int i = 0; i < n; i++) {
-            Type t = ports.get(i).getType();
+            Port p = ports.get(i);
+
             int cx = x0 + (inputs ? 0 : SYS_W);
             int cy = y0 + (i + 1) * SYS_H / (n + 1);
-            drawShape(g2, t, cx, cy);
+
+            /* ✱ NEW: keep model in sync with where we actually draw ✱ */
+            p.setCenter(new Point(cx, cy));
+
+            drawShape(g2, p.getType(), cx, cy);
         }
     }
 
