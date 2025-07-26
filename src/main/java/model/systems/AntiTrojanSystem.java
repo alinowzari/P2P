@@ -22,6 +22,7 @@ public class AntiTrojanSystem extends System {
         // just queue everything — cleaning is a separate step
         packets.add(packet);
         packet.setSystem(this);
+        addingCoin(packet);
     }
 
     public void cleanTrojan() {

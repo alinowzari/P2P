@@ -28,6 +28,7 @@ public class MergerSystem extends System{
 
         packets.add(packet); // ordinary packet
         packet.setSystem(this);
+        addingCoin(packet);
     }
 
     private void checkMerge(int parentId) {

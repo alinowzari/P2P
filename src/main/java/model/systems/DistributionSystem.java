@@ -32,6 +32,7 @@ public class DistributionSystem extends System {
         // else normal
         packets.add(packet);
         packet.setSystem(this);
+        addPacket(packet);
     }
 
     public void sendPacket() {

@@ -20,7 +20,9 @@ public class SystemManager {
     public ArrayList<Packet> allPackets;
     public ArrayList<Line> allLines;
     private HashMap<Integer, ArrayList<BitPacket>> bigPackets;
+    private boolean isReady;
     private static final float DT = Packet.dt;
+    public int coinCount = 0;
     public SystemManager() {
         systems = new ArrayList<>();
         spySystems = new ArrayList<>();
@@ -120,8 +122,9 @@ public class SystemManager {
     public void addLine(Line line) {allLines.add(line);}
     public void removeLine(Line line) {allLines.remove(line);}
 
+    public boolean isReady() {return isReady;}
+    public void addCoin(int plus){coinCount+=plus;}
     public void update() {
-
         /* -------- 1: move packets along their lines -------- */
         for (Line l : allLines) {
             Packet pkt = l.getMovingPacket();
@@ -150,9 +153,13 @@ public class SystemManager {
         }
 
         /* -------- 2: try to send from every fully-wired system -------- */
+        isReady = true;
         for (System sys : systems) {
             if (allOutputsConnected(sys)) {
                 sys.sendPacket();     // will occupy a free line if any exist
+            }
+            else{
+                isReady = false;
             }
         }
     }

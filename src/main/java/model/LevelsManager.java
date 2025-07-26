@@ -23,7 +23,6 @@ import java.util.Objects;
 public class LevelsManager {
     private final List<GameConfig> configs;
     private final List<SystemManager> levelManagers;
-
     public LevelsManager() {
         // Load all level configurations
         this.configs = ConfigManager.getInstance().getAllLevels();

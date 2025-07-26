@@ -1,9 +1,6 @@
 package model;
 
-import model.packets.BigPacket;
-import model.packets.ProtectedPacket;
-import model.packets.SecretPacket1;
-import model.packets.SecretPacket2;
+import model.packets.*;
 import model.ports.InputPort;
 import model.ports.OutputPort;
 
@@ -78,4 +75,16 @@ public abstract class System {
         return null;
     }
     public Point getLocation() {return location;}
+    public void addingCoin(Packet packet) {
+        switch (packet) {
+            case SquarePacket sp -> systemManager.addCoin(2);
+            case TrianglePacket tp -> systemManager.addCoin(3);
+            case InfinityPacket ip -> systemManager.addCoin(1);
+            case SecretPacket2<?> secret -> systemManager.addCoin(4);
+            case SecretPacket1 secret -> systemManager.addCoin(3);
+            case ProtectedPacket<?> prp -> systemManager.addCoin(5);
+            case BigPacket bp -> systemManager.addCoin(bp.size);
+            default -> systemManager.addCoin(1);
+        }
+    }
 }

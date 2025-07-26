@@ -34,6 +34,7 @@ public class DestroyerSystem extends System {
         // 3) queue for later sending
         packets.add(packet);
         packet.setSystem(this);
+        addPacket(packet);
     }
     @Override
     public void sendPacket() {

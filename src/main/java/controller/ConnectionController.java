@@ -91,16 +91,20 @@ public class ConnectionController extends MouseInputAdapter {
 
         // 3) normal left-click wiring
         if (SwingUtilities.isLeftMouseButton(e)) {
-            dragSource = findOutputAt(p);
-            if (dragSource != null) {
+            OutputPort port=findOutputAt(p);
+            if (port != null && port.getLine() == null) {
+                dragSource = port;
+                System.out.println(dragSource.getLine());
                 canvas.showPreview(dragSource.getCenter(), p);
+            }
+            else{
+                dragSource = null;
             }
         }
         if (mode == Mode.IDLE &&
                 SwingUtilities.isLeftMouseButton(e) &&
                 hMid != null && hMid.distance(p) < 6) {
             mode = Mode.DRAG_MIDDLE;
-            return;
         }
     }
 

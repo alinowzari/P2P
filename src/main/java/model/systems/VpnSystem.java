@@ -40,6 +40,7 @@ public class VpnSystem extends System {
             packets.add(prot);
             prot.setSystem(this);
         }
+        addingCoin(packet);
     }
     public void sendPacket() {
 

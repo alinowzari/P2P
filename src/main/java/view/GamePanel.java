@@ -26,14 +26,22 @@ public class GamePanel extends JPanel {
     private static final int SYS_W = 90, SYS_H = 70, PORT = 12, RND = 16;
 
     private final SystemManager model;
-
+    private final JLabel        statusLabel;
+    private final JLabel        coinLabel;
     /* dashed rubber-band preview during drag */
     private Point previewA, previewB;
     private Point hMid, hA, hB;
     public GamePanel(SystemManager model) {
         this.model = model;
         setBackground(Color.WHITE);
-        setLayout(null);          // absolute coords, though we draw manually
+        setLayout(null);
+        statusLabel = new JLabel("Ready: false");
+        statusLabel.setBounds(10, 10, 120, 20);
+        add(statusLabel);
+
+        coinLabel = new JLabel("Coins: 0");
+        coinLabel.setBounds(10, 30, 120, 20);
+        add(coinLabel);
     }
 
     /* ========== preview helpers called by controller ========== */
@@ -53,6 +61,10 @@ public class GamePanel extends JPanel {
 
     @Override protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        // ── update our two labels ──────────────────────────────────────
+        statusLabel.setText("Ready: " + model.isReady());
+        coinLabel.setText("Coins: " + model.coinCount);
+
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);

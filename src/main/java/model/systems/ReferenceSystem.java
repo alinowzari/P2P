@@ -21,6 +21,7 @@ public class ReferenceSystem extends System {
         receivedCount++;
         systemManager.removePacket(packet);
         packet.setSystem(this);
+        addPacket(packet);
     }
 
     /**

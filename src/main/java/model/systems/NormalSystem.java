@@ -20,6 +20,7 @@ public class NormalSystem extends System {
     public void receivePacket(Packet packet){
         packets.add(packet);
         packet.setSystem(this);
+        addPacket(packet);
     }
     public void sendPacket() {
 

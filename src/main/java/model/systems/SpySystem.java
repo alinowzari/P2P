@@ -25,6 +25,7 @@ public class SpySystem extends System {
         else{
             systemManager.removePacket(packet);
         }
+        addingCoin(packet);
     }
     public void changeSystem() {
         if (packets.isEmpty()) return;
