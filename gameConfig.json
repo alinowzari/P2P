@@ -5,8 +5,8 @@
       "id": 1,
       "type": "ReferenceSystem",
       "position": { "x": 100, "y": 100 },
-      "inputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
-      "outputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
+      "inputPorts": ["InfinityPort"],
+      "outputPorts": ["InfinityPort", "SquarePort"],
       "initialPackets": [
         { "packetId": 1, "type": "InfinityPacket", "count": 2 },
         { "packetId": 2, "type": "SquarePacket",   "count": 1 },
@@ -16,9 +16,9 @@
     {
       "id": 2,
       "type": "ReferenceSystem",
-      "position": { "x": 300, "y": 100 },
-      "inputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
-      "outputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
+      "position": { "x": 100, "y": 300 },
+      "inputPorts": ["TrianglePort"],
+      "outputPorts": ["InfinityPort", "TrianglePort"],
       "initialPackets": [
         { "packetId": 4, "type": "InfinityPacket", "count": 1 },
         { "packetId": 5, "type": "SquarePacket",   "count": 1 },
@@ -28,41 +28,25 @@
     {
       "id": 3,
       "type": "NormalSystem",
-      "position": { "x": 100, "y": 300 },
-      "inputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
-      "outputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
+      "position": { "x": 300, "y": 300 },
+      "inputPorts": ["SquarePort", "TrianglePort"],
+      "outputPorts": ["TrianglePort"],
       "initialPackets": []
     },
     {
       "id": 4,
-      "type": "NormalSystem",
-      "position": { "x": 300, "y": 300 },
-      "inputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
-      "outputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
+      "type": "SpySystem",
+      "position": { "x": 500, "y": 100 },
+      "inputPorts": ["InfinityPort", "InfinityPort"],
+      "outputPorts": ["SquarePort"],
       "initialPackets": []
     },
     {
       "id": 5,
-      "type": "SpySystem",
-      "position": { "x": 500, "y": 100 },
-      "inputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
-      "outputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
-      "initialPackets": []
-    },
-    {
-      "id": 6,
-      "type": "SpySystem",
-      "position": { "x": 500, "y": 300 },
-      "inputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
-      "outputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
-      "initialPackets": []
-    },
-    {
-      "id": 7,
       "type": "VpnSystem",
       "position": { "x": 700, "y": 200 },
-      "inputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
-      "outputPorts": ["InfinityPort", "SquarePort", "TrianglePort"],
+      "inputPorts": ["SquarePort", "TrianglePort"],
+      "outputPorts": ["InfinityPort", "TrianglePort"],
       "initialPackets": []
     }
   ]

@@ -4,6 +4,7 @@ import model.packets.BigPacket;
 import model.packets.BitPacket;
 import model.packets.ProtectedPacket;
 import model.packets.SecretPacket2;
+import model.ports.InputPort;
 import model.ports.OutputPort;
 import model.systems.SpySystem;
 import model.systems.VpnSystem;
@@ -12,16 +13,21 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 
+import static model.Packet.dt;
+
 public class SystemManager {
     ArrayList<System> systems;
     ArrayList<SpySystem> spySystems;
     ArrayList<VpnSystem> vpnSystems;
     private final Random rng = new Random();
+    private final Set<Integer> packetIds = new HashSet<>();
     public ArrayList<Packet> allPackets;
     public ArrayList<Line> allLines;
     private HashMap<Integer, ArrayList<BitPacket>> bigPackets;
     private boolean isReady;
-    private static final float DT = Packet.dt;
+    private boolean launched;
+    public boolean test;
+    private static final float DT = dt;
     public int coinCount = 0;
     public SystemManager() {
         systems = new ArrayList<>();
@@ -53,10 +59,11 @@ public class SystemManager {
             handleVpnDestruction(vpn.getId());
         }
     }
-    public void addPacket(Packet packet) {
-        allPackets.add(packet);
-        if(packet instanceof BigPacket) {
-            bigPackets.put(packet.getId(), ((BigPacket) packet).split() );
+    public void addPacket(Packet p) {
+        if (packetIds.add(p.getId())) {        // returns false if ID already present
+            allPackets.add(p);
+            if (p instanceof BigPacket big)
+                bigPackets.put(big.getId(), big.split());
         }
     }
     public void removePacket(Packet packet) {allPackets.remove(packet);}
@@ -101,12 +108,6 @@ public class SystemManager {
             }
         }
     }
-    public SpySystem getRandomSpySystem() {
-        if (spySystems.isEmpty()) {
-            return null;
-        }
-        return spySystems.get(rng.nextInt(spySystems.size()));
-    }
     public ArrayList<System> getAllSystems() {
         return systems;
     }
@@ -123,43 +124,53 @@ public class SystemManager {
     public void removeLine(Line line) {allLines.remove(line);}
 
     public boolean isReady() {return isReady;}
+    public boolean isLaunched() {return launched;}
+    public void launchPackets() { launched = true; }
     public void addCoin(int plus){coinCount+=plus;}
-    public void update() {
+    public void update(float dt) {
         /* -------- 1: move packets along their lines -------- */
+//        for (Line l : allLines) {
+//            Packet pkt = l.getMovingPacket();
+//            if (pkt == null) continue;
+//
+//            /* integrate velocity */
+//            float v  = pkt.getSpeed() + pkt.getAcceleration() * DT;
+//            float t  = pkt.getProgress() + v * DT;
+//            pkt.setSpeed(v);
+//
+//            java.lang.System.out.printf("this is packet count "+ allPackets.size());
+//            List<Point> path = l.getPath(6);     // path already includes bends
+//            if (t >= 1f) {
+//                /* ── ARRIVAL ───────────────────────────────────────────── */
+//                pkt.setProgress(1f);
+//                pkt.setPoint(path.get(path.size() - 1));
+//
+//                l.removeMovingPacket();      // frees the line
+//                l.getEnd().getParentSystem().receivePacket(pkt);
+//                pkt.setSystem(l.getEnd().getParentSystem());
+//
+//            } else {
+//                /* ── STILL TRAVELLING ──────────────────────────────────── */
+//                pkt.setProgress(t);
+//                pkt.setPoint(along(path, t));     // interpolate along bends
+//            }
+//        }
         for (Line l : allLines) {
             Packet pkt = l.getMovingPacket();
-            if (pkt == null) continue;
-
-            /* integrate velocity */
-            float v  = pkt.getSpeed() + pkt.getAcceleration() * DT;
-            float t  = pkt.getProgress() + v * DT;
-            pkt.setSpeed(v);
-
-            List<Point> path = l.getPath(0);     // path already includes bends
-            if (t >= 1f) {
-                /* ── ARRIVAL ───────────────────────────────────────────── */
-                pkt.setProgress(1f);
-                pkt.setPoint(path.get(path.size() - 1));
-
-                l.removeMovingPacket();      // frees the line
-                l.getEnd().getParentSystem().receivePacket(pkt);
-                pkt.setSystem(l.getEnd().getParentSystem());
-
-            } else {
-                /* ── STILL TRAVELLING ──────────────────────────────────── */
-                pkt.setProgress(t);
-                pkt.setPoint(along(path, t));     // interpolate along bends
+            if (pkt != null) {
+                pkt.advance(dt);              // polymorphic – each subclass decides
             }
         }
 
         /* -------- 2: try to send from every fully-wired system -------- */
-        isReady = true;
-        for (System sys : systems) {
-            if (allOutputsConnected(sys)) {
-                sys.sendPacket();     // will occupy a free line if any exist
-            }
-            else{
-                isReady = false;
+        isReady = systems.stream().allMatch(this::allOutputsConnected)
+                && systems.stream().allMatch(this::allInputsConnected);
+
+        if (launched && isReady) {
+            for (System sys : systems) {
+                if (!sys.getPackets().isEmpty()) {
+                    sys.sendPacket();
+                }
             }
         }
     }
@@ -169,8 +180,14 @@ public class SystemManager {
                 return false;
         return true;
     }
-
-    /* Return the point ‘t’ along an arbitrary poly-line (0-1) */
+    private boolean allInputsConnected(System s) {
+        for (InputPort ip : s.getInputPorts()){
+            if(ip.getLine() == null){
+                return false;
+            }
+        }
+        return true;
+    }
     private Point along(List<Point> pts, float t) {
         if (pts.size() < 2) return pts.get(0);
 

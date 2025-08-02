@@ -4,6 +4,7 @@ import model.Packet;
 import model.Port;
 import model.Type;
 import model.System;
+import model.systems.ReferenceSystem;
 
 import java.awt.*;
 
@@ -13,5 +14,9 @@ public class InputPort extends Port {
     }
     public void transferPacket(Packet packet) {
         parentSystem.addPacket(packet);
+        if(parentSystem instanceof ReferenceSystem){
+            ((ReferenceSystem) parentSystem).addToReceivedCount();
+            packet.doneMovement();
+        }
     }
 }

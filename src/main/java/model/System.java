@@ -87,4 +87,5 @@ public abstract class System {
             default -> systemManager.addCoin(1);
         }
     }
+    public SystemManager getSystemManager() {return systemManager;}
 }

@@ -83,7 +83,7 @@ public class LevelsManager {
                     int x = sysX + sysW;
                     // same vertical spacing
                     int y = sysY + (i + 1) * sysH / (outNames.size() + 1);
-                    String inName = inNames.get(i);
+                    String inName = outNames.get(i);
                     OutputPort op = makeOutputPort(sys, new Point(x, y), inName);
                     outputPorts.add(op);
                 }

@@ -13,6 +13,9 @@ public class OutputPort extends Port {
 
 
     public void movePacketThrow(Packet packet) {
-        packet.setLine(line);
+        if (line == null || packet.getDoneMovement()) return;             // not wired
+
+        packet.beginTraversal(line, getCenter());
+        line.setMovingPacket(packet);
     }
 }

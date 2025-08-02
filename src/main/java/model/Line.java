@@ -34,6 +34,7 @@ public class Line {
     public void setMovingPacket(Packet movingPacket) {
         this.movingPacket = movingPacket;
         isOccupied = true;
+        movingPacket.isMoving = true;
     }
     public void removeMovingPacket() {
         this.movingPacket = null;

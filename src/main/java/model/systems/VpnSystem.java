@@ -40,6 +40,9 @@ public class VpnSystem extends System {
             packets.add(prot);
             prot.setSystem(this);
         }
+        else{
+            packets.add(packet);
+        }
         addingCoin(packet);
     }
     public void sendPacket() {
@@ -48,7 +51,7 @@ public class VpnSystem extends System {
         if (packets.isEmpty()) return;
 
         Packet packet = packets.get(0);                 // FIFO policy
-
+        if(packet.getDoneMovement())return;
         /* 2 ── partition output ports into compatible / incompatible */
         ArrayList<OutputPort> compatible   = new ArrayList<>();
         ArrayList<OutputPort> incompatible = new ArrayList<>();

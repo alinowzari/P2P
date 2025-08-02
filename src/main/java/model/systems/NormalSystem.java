@@ -20,7 +20,6 @@ public class NormalSystem extends System {
     public void receivePacket(Packet packet){
         packets.add(packet);
         packet.setSystem(this);
-        addPacket(packet);
     }
     public void sendPacket() {
 
@@ -28,8 +27,7 @@ public class NormalSystem extends System {
         if (packets.isEmpty()) return;
 
         Packet packet = packets.get(0);                 // FIFO policy
-
-        /* 2 ── partition output ports into compatible / incompatible */
+        if(packet.getDoneMovement())return;
         ArrayList<OutputPort> compatible   = new ArrayList<>();
         ArrayList<OutputPort> incompatible = new ArrayList<>();
 

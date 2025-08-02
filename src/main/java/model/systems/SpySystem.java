@@ -32,7 +32,7 @@ public class SpySystem extends System {
 
         // pop the head packet
         Packet head = packets.remove(0);
-
+        if(head.getDoneMovement())return;
         // 1) Protected/secret → just send it out normally
         if (head instanceof ProtectedPacket) {
             // re-queue at front so sendPacket picks it up
@@ -67,7 +67,6 @@ public class SpySystem extends System {
 //        if (packets.isEmpty()) {
 //            return;
 //        }
-
         Packet packet = packets.get(0);
 
         ArrayList<OutputPort> compatible   = new ArrayList<>();

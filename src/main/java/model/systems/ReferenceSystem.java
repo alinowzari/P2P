@@ -21,7 +21,10 @@ public class ReferenceSystem extends System {
         receivedCount++;
         systemManager.removePacket(packet);
         packet.setSystem(this);
-        addPacket(packet);
+        packets.remove(packet);
+        packet.doneMovement();
+        java.lang.System.out.println("Received packet " + packet.getId() + " status " + packet.getDoneMovement());
+
     }
 
     /**
@@ -33,8 +36,7 @@ public class ReferenceSystem extends System {
         if (packets.isEmpty()) return;
 
         Packet packet = packets.get(0);  // FIFO
-
-        // partition output ports into compatible / incompatible
+        if(packet.getDoneMovement())return;
         ArrayList<OutputPort> compatible   = new ArrayList<>();
         ArrayList<OutputPort> incompatible = new ArrayList<>();
         for (OutputPort op : outputPorts) {
@@ -56,4 +58,5 @@ public class ReferenceSystem extends System {
     public int getReceivedCount() {
         return receivedCount;
     }
+    public void addToReceivedCount() {receivedCount++;}
 }

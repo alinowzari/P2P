@@ -1,5 +1,6 @@
 package controller;
 
+import model.Packet;
 import model.SystemManager;
 import view.GamePanel;
 
@@ -14,25 +15,37 @@ import java.awt.CardLayout;
  */
 public class GameController {
 
-    private final SystemManager model;
     private final GamePanel     panel;
     private final Timer         timer;
+    private final JButton launchBtn = new JButton("Launch packets");
 
-    public GameController(SystemManager model, JPanel cards) {
-        this.model = model;
 
+    public GameController(SystemManager sm, JPanel cards) {
         /* 1 ▸ view */
-        panel = new GamePanel(model);
+        panel = new GamePanel(sm);
         cards.add(panel, "GAME");
         ((CardLayout) cards.getLayout()).show(cards, "GAME");
 
         /* 2 ▸ input */
-        new ConnectionController(model, panel);
+        new ConnectionController(sm, panel);
 
-        /* 3 ▸ loop: update model, then repaint canvas */
-        timer = new Timer(16, e -> {
-            model.update();   // physics, packet motion, etc.
-            panel.repaint();  // paint new model state
+
+        launchBtn.setBounds(150, 10, 140, 25);
+        launchBtn.addActionListener(e -> {
+            sm.launchPackets();
+            launchBtn.setEnabled(false);        // one-shot
+        });
+        launchBtn.setEnabled(false);
+        panel.add(launchBtn);
+
+
+        final float FIXED_DT = 1f / 60f;                 // 16.666… ms
+        timer = new Timer(16, e -> {                     // 60 FPS
+            sm.update(FIXED_DT * Packet.SPEED_SCALE);    // ← SCALE knob
+            panel.repaint();
+
+            if (sm.isReady() && !sm.isLaunched())
+                launchBtn.setEnabled(true);
         });
         timer.start();
     }

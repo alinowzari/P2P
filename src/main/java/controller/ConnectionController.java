@@ -46,7 +46,6 @@ public class ConnectionController extends MouseInputAdapter {
     private void initPopup() {
         JMenuItem bend   = new JMenuItem("Add bend…");
         JMenuItem remove = new JMenuItem("Remove line");
-
         bend.addActionListener(e -> {
             if (editLine != null) {
                 mode = Mode.WAIT_MIDDLE;
@@ -94,7 +93,6 @@ public class ConnectionController extends MouseInputAdapter {
             OutputPort port=findOutputAt(p);
             if (port != null && port.getLine() == null) {
                 dragSource = port;
-                System.out.println(dragSource.getLine());
                 canvas.showPreview(dragSource.getCenter(), p);
             }
             else{
