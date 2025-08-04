@@ -20,28 +20,34 @@ public class VpnSystem extends System {
         super(location, inputPorts, outputPorts, systemManager, id);
     }
     public void receivePacket(Packet packet) {
+        packet.getLine().removeMovingPacket();
+        packet.setLine(null);
         if (packet instanceof ProtectedPacket<?> pp) {
             SecretPacket2<?> secret = pp.changePacket();
             secret.setSystemId(id);
             systemManager.removePacket(packet);
             systemManager.addPacket(secret);
-            packets.add(secret);
+            addPacket(secret);
             secret.setSystem(this);
+            secret.isNotMoving();
             return;
         }
 
         /* 2) Wrap ordinary messenger packets → Protected */
-        if (packet instanceof MessengerTag) {
+        else if (packet instanceof MessengerTag) {
             // cast to intersection type so generics accept it
             ProtectedPacket<?> prot = new ProtectedPacket<>((Packet & MessengerTag) packet);
             systemManager.removePacket(packet);
             systemManager.addPacket(prot);
             prot.setSystemId(id);
-            packets.add(prot);
+            addPacket(prot);
             prot.setSystem(this);
+            prot.isNotMoving();
         }
         else{
-            packets.add(packet);
+            addPacket(packet);
+            packet.setSystem(this);
+            packet.isNotMoving();
         }
         addingCoin(packet);
     }

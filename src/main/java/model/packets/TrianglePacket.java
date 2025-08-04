@@ -144,11 +144,7 @@ public class TrianglePacket extends Packet implements MessengerTag {
 
         /* 3 ▸ reached destination? */
         if (segIdx >= segLen.size()) {
-            line.removeMovingPacket();
-            line.getEnd().transferPacket(this);
-            setSystem(line.getEnd().getParentSystem());
-            setLine(null);
-            isMoving = false;
+            line.getEnd().getParentSystem().receivePacket(this);
         }
     }
 

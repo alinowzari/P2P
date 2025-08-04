@@ -26,16 +26,12 @@ public abstract class Packet {
 
     public void setSystem(System system) {
         this.system = system;
-//        isMoving=false;
-        line=null;
     }
 
     public void setLine(Line line) {
         this.line = line;
-        isMoving=true;
-        system=null;
     }
-
+    public Line getLine() {return line;}
     public void isTrojan(){trojan=true;}
     public void isNotTrojan(){trojan=false;}
     public boolean hasTrojan() {return trojan;}
@@ -132,4 +128,5 @@ public abstract class Packet {
 
     public void doneMovement() {doneMovement = true;}
     public boolean getDoneMovement(){return doneMovement;}
+    public void isNotMoving(){isMoving = false;}
 }

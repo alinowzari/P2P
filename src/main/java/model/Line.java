@@ -79,10 +79,10 @@ public class Line {
         boolean inSpan1 = (a >= span1Lo) && (b <= span1Hi);
         boolean inSpan2 = (a >= span2Lo) && (b <= span2Hi);
 
-        if (!inSpan1 && !inSpan2) {
-            throw new IllegalArgumentException(
-                    "New bend must lie entirely before the first bend or after the last bend");
-        }
+//        if (!inSpan1 && !inSpan2) {
+//            throw new IllegalArgumentException(
+//                    "New bend must lie entirely before the first bend or after the last bend");
+//        }
 //        bendPoints.add(new BendPoint(footA, middle, footB));
 //        bendPoints.sort(
 //                Comparator.comparingDouble(bp -> projectionT(bp.getMiddle())));

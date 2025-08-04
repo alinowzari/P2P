@@ -20,9 +20,13 @@ public class ReferenceSystem extends System {
     public void receivePacket(Packet packet) {
         receivedCount++;
         systemManager.removePacket(packet);
+        packet.getLine().removeMovingPacket();
+        packet.setLine(null);
         packet.setSystem(this);
         packets.remove(packet);
+        packet.isNotMoving();
         packet.doneMovement();
+        addingCoin(packet);
         java.lang.System.out.println("Received packet " + packet.getId() + " status " + packet.getDoneMovement());
 
     }

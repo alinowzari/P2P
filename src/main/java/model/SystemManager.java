@@ -22,6 +22,7 @@ public class SystemManager {
     private final Random rng = new Random();
     private final Set<Integer> packetIds = new HashSet<>();
     public ArrayList<Packet> allPackets;
+    private static final int SAFE_RADIUS = 35;
     public ArrayList<Line> allLines;
     private HashMap<Integer, ArrayList<BitPacket>> bigPackets;
     private boolean isReady;
@@ -66,7 +67,14 @@ public class SystemManager {
                 bigPackets.put(big.getId(), big.split());
         }
     }
-    public void removePacket(Packet packet) {allPackets.remove(packet);}
+    public void removePacket(Packet packet) {
+        allPackets.remove(packet);
+        for(System system : systems) {
+            if(system.getPackets().contains(packet)) {
+                system.removePacket(packet);
+            }
+        }
+    }
 
 
     public void handleVpnDestruction(int vpnId) {
@@ -128,33 +136,6 @@ public class SystemManager {
     public void launchPackets() { launched = true; }
     public void addCoin(int plus){coinCount+=plus;}
     public void update(float dt) {
-        /* -------- 1: move packets along their lines -------- */
-//        for (Line l : allLines) {
-//            Packet pkt = l.getMovingPacket();
-//            if (pkt == null) continue;
-//
-//            /* integrate velocity */
-//            float v  = pkt.getSpeed() + pkt.getAcceleration() * DT;
-//            float t  = pkt.getProgress() + v * DT;
-//            pkt.setSpeed(v);
-//
-//            java.lang.System.out.printf("this is packet count "+ allPackets.size());
-//            List<Point> path = l.getPath(6);     // path already includes bends
-//            if (t >= 1f) {
-//                /* ── ARRIVAL ───────────────────────────────────────────── */
-//                pkt.setProgress(1f);
-//                pkt.setPoint(path.get(path.size() - 1));
-//
-//                l.removeMovingPacket();      // frees the line
-//                l.getEnd().getParentSystem().receivePacket(pkt);
-//                pkt.setSystem(l.getEnd().getParentSystem());
-//
-//            } else {
-//                /* ── STILL TRAVELLING ──────────────────────────────────── */
-//                pkt.setProgress(t);
-//                pkt.setPoint(along(path, t));     // interpolate along bends
-//            }
-//        }
         for (Line l : allLines) {
             Packet pkt = l.getMovingPacket();
             if (pkt != null) {
@@ -163,8 +144,12 @@ public class SystemManager {
         }
 
         /* -------- 2: try to send from every fully-wired system -------- */
-        isReady = systems.stream().allMatch(this::allOutputsConnected)
-                && systems.stream().allMatch(this::allInputsConnected);
+        boolean everyPortWired =
+                systems.stream().allMatch(this::allOutputsConnected)
+                        && systems.stream().allMatch(this::allInputsConnected);
+
+        boolean noWireCutsThroughSystem = wiringClearsSystemCentres();
+        isReady=noWireCutsThroughSystem && everyPortWired;
 
         if (launched && isReady) {
             for (System sys : systems) {
@@ -188,29 +173,35 @@ public class SystemManager {
         }
         return true;
     }
-    private Point along(List<Point> pts, float t) {
-        if (pts.size() < 2) return pts.get(0);
+    private boolean wiringClearsSystemCentres() {
 
-        /* 1. total length & per-segment lengths */
-        double total = 0;
-        double[] segLen = new double[pts.size()-1];
-        for (int i=0;i<segLen.length;i++){
-            total += segLen[i] = pts.get(i).distance(pts.get(i+1));
-        }
-        double goal = t * total;
+        for (System sys : systems) {
 
-        /* 2. walk segments until we reach ‘goal’ */
-        double run = 0;
-        for (int i=0;i<segLen.length;i++){
-            if (run + segLen[i] >= goal) {
-                double localT = (goal - run) / segLen[i];
-                Point a = pts.get(i), b = pts.get(i+1);
-                int x = (int)Math.round(a.x + localT * (b.x - a.x));
-                int y = (int)Math.round(a.y + localT * (b.y - a.y));
-                return new Point(x, y);
+            /* centre of the rounded rectangle */
+            Point c = new Point(
+                    sys.getLocation().x + 90/2,   // SYS_W from GamePanel
+                    sys.getLocation().y + 70/2);  // SYS_H from GamePanel
+
+            for (Line l : allLines) {
+                List<Point> pts = l.getPath(6);           // smoothed poly-line
+                for (int i = 0; i < pts.size()-1; i++) {
+                    if (segmentDistance(c, pts.get(i), pts.get(i+1)) < SAFE_RADIUS)
+                        return false;                     // wire too close → not ready
+                }
             }
-            run += segLen[i];
         }
-        return pts.get(pts.size()-1);             // fallback
+        return true;                                      // every centre is clear
     }
+
+    /* minimal distance from point p to segment ab (helper) */
+    private static double segmentDistance(Point p, Point a, Point b) {
+        double dx = b.x - a.x, dy = b.y - a.y;
+        if (dx == 0 && dy == 0) return p.distance(a);     // a==b
+        double t = ((p.x - a.x)*dx + (p.y - a.y)*dy) / (dx*dx + dy*dy);
+        t = Math.max(0, Math.min(1, t));                  // clamp to [0,1]
+        double projX = a.x + t*dx, projY = a.y + t*dy;
+        return p.distance(projX, projY);
+    }
+    /* ================================================================ */
+
 }

@@ -18,8 +18,12 @@ public class NormalSystem extends System {
         super(location, inputPorts, outputPorts, systemManager, id);
     }
     public void receivePacket(Packet packet){
-        packets.add(packet);
+        packet.getLine().removeMovingPacket();
+        packet.setLine(null);
+        addPacket(packet);
         packet.setSystem(this);
+        packet.isNotMoving();
+        addingCoin(packet);
     }
     public void sendPacket() {
 

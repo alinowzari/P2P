@@ -255,11 +255,7 @@ public class InfinityPacket extends Packet implements MessengerTag {
 
     /* helper: when packet leaves the line */
     private void finishTraversal(System target) {
-        line.removeMovingPacket();
-        line.getEnd().transferPacket(this);
-        setSystem(line.getEnd().getParentSystem());
-        setLine(null);
-        isMoving = false;
+        line.getEnd().getParentSystem().receivePacket(this);
     }
     @Override
     protected void resetPath() {

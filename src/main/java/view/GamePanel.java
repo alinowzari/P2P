@@ -54,56 +54,110 @@ public class GamePanel extends JPanel {
     }
     /* =========================================================== */
 
-    @Override protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        // ── update our two labels ──────────────────────────────────────
-        statusLabel.setText("Ready: " + model.isReady());
-        coinLabel.setText("Coins: " + model.coinCount);
-        //if crashed remove this line
-//        repaint();
+//    @Override protected void paintComponent(Graphics g) {
+//        super.paintComponent(g);
+//        // ── update our two labels ──────────────────────────────────────
+//        statusLabel.setText("Ready: " + model.isReady());
+//        coinLabel.setText("Coins: " + model.coinCount);
+//        //if crashed remove this line
+////        repaint();
+//
+//        Graphics2D g2 = (Graphics2D) g;
+//        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+//                RenderingHints.VALUE_ANTIALIAS_ON);
+//
+//        /* 1 ▸ draw wires */
+//        if (model.allLines != null)
+//            for (Line l : model.allLines) {
+//                g2.setStroke(new BasicStroke(2));
+//                g2.setColor(Color.BLACK);
+//                List<Point> pts = l.getPath(6);
+//                for (int i = 0; i < pts.size() - 1; i++) {
+//                    Point a = pts.get(i), b = pts.get(i + 1);
+//                    g2.drawLine(a.x, a.y, b.x, b.y);
+//                }
+//            }
+//
+//        /* 2 ▸ dashed preview */
+//        if (previewA != null && previewB != null) {
+//            g2.setColor(new Color(0, 0, 0, 128));
+//            g2.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
+//                    0, new float[]{6, 6}, 0));
+//            g2.drawLine(previewA.x, previewA.y, previewB.x, previewB.y);
+//        }
+//
+//        /* 3 ▸ systems & ports */
+//        for (var sys : model.getAllSystems()) {
+//            drawSystem(g2, sys);
+//        }
+//        for (var pkt : model.allPackets) {       // or model.getAllPackets()
+//            drawPacket(g2, pkt);
+//        }
+//        /* 2b ▸ draw bend handles */
+//        if (hMid != null) {
+//            g2.setColor(Color.YELLOW);
+//            g2.fillOval(hMid.x-4, hMid.y-4, 8, 8);
+//        }
+//        if (hA != null && hB != null) {
+//            g2.setColor(Color.RED);
+//            g2.fillOval(hA.x-3, hA.y-3, 6, 6);
+//            g2.fillOval(hB.x-3, hB.y-3, 6, 6);
+//        }
+//    }
+@Override
+protected void paintComponent(Graphics g) {
+    super.paintComponent(g);
 
-        Graphics2D g2 = (Graphics2D) g;
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON);
+    statusLabel.setText("Ready: " + model.isReady());
+    coinLabel.setText("Coins: " + model.coinCount);
 
-        /* 1 ▸ draw wires */
-        if (model.allLines != null)
-            for (Line l : model.allLines) {
-                g2.setStroke(new BasicStroke(2));
-                g2.setColor(Color.BLACK);
-                List<Point> pts = l.getPath(6);
-                for (int i = 0; i < pts.size() - 1; i++) {
-                    Point a = pts.get(i), b = pts.get(i + 1);
-                    g2.drawLine(a.x, a.y, b.x, b.y);
-                }
+    Graphics2D g2 = (Graphics2D) g;
+    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+            RenderingHints.VALUE_ANTIALIAS_ON);
+
+    /* 1 ▸ systems & ports FIRST (background) */
+    for (var sys : model.getAllSystems()) {
+        drawSystem(g2, sys);
+    }
+
+    /* 2 ▸ wires ON TOP of the systems */
+    if (model.allLines != null) {
+        g2.setStroke(new BasicStroke(2));
+        g2.setColor(Color.BLACK);
+        for (Line l : model.allLines) {
+            List<Point> pts = l.getPath(6);
+            for (int i = 0; i < pts.size() - 1; i++) {
+                Point a = pts.get(i), b = pts.get(i + 1);
+                g2.drawLine(a.x, a.y, b.x, b.y);
             }
-
-        /* 2 ▸ dashed preview */
-        if (previewA != null && previewB != null) {
-            g2.setColor(new Color(0, 0, 0, 128));
-            g2.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
-                    0, new float[]{6, 6}, 0));
-            g2.drawLine(previewA.x, previewA.y, previewB.x, previewB.y);
-        }
-
-        /* 3 ▸ systems & ports */
-        for (var sys : model.getAllSystems()) {
-            drawSystem(g2, sys);
-        }
-        for (var pkt : model.allPackets) {       // or model.getAllPackets()
-            drawPacket(g2, pkt);
-        }
-        /* 2b ▸ draw bend handles */
-        if (hMid != null) {
-            g2.setColor(Color.YELLOW);
-            g2.fillOval(hMid.x-4, hMid.y-4, 8, 8);
-        }
-        if (hA != null && hB != null) {
-            g2.setColor(Color.RED);
-            g2.fillOval(hA.x-3, hA.y-3, 6, 6);
-            g2.fillOval(hB.x-3, hB.y-3, 6, 6);
         }
     }
+
+    /* 3 ▸ dashed preview (still above wires) */
+    if (previewA != null && previewB != null) {
+        g2.setColor(new Color(0, 0, 0, 128));
+        g2.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND,
+                BasicStroke.JOIN_ROUND,
+                0, new float[]{6, 6}, 0));
+        g2.drawLine(previewA.x, previewA.y, previewB.x, previewB.y);
+    }
+
+    /* 4 ▸ travelling packets – always foremost */
+    for (var pkt : model.allPackets) {
+        drawPacket(g2, pkt);
+    }
+
+    /* 5 ▸ bend handles */
+    if (hMid != null) {
+        g2.setColor(Color.YELLOW); g2.fillOval(hMid.x-4, hMid.y-4, 8, 8);
+    }
+    if (hA != null && hB != null) {
+        g2.setColor(Color.RED);
+        g2.fillOval(hA.x-3, hA.y-3, 6, 6);
+        g2.fillOval(hB.x-3, hB.y-3, 6, 6);
+    }
+}
+
 
     /* ---------- helpers ---------- */
     private void drawSystem(Graphics2D g2, model.System sys) {
@@ -132,61 +186,6 @@ public class GamePanel extends JPanel {
         paintPorts(g2, sys.getOutputPorts(), x0, y0, false);
         drawQueuedPackets(g2, sys, x0, y0 + SYS_H + 4);
     }
-//    private void drawPacket(Graphics2D g2, Packet p) {
-//        if(p.getPoint()==null) return;
-//        int cx = p.getPoint().x, cy = p.getPoint().y;
-//        int s  = p.getSize();              // treat as “radius” or half-side
-//
-//        switch (p) {                       // JDK 22 instance-pattern switch
-//            case InfinityPacket inf -> {
-//                g2.setColor(Color.MAGENTA);
-//                drawInfinity(g2, cx, cy, s);
-//            }
-//            case SquarePacket sq -> {
-//                g2.setColor(Color.BLUE);
-//                g2.fillRect(cx - s, cy - s, 2 * s, 2 * s);
-//            }
-//            case TrianglePacket tri -> {
-//                g2.setColor(Color.ORANGE);
-//                int[] xs = {cx, cx - s, cx + s};
-//                int[] ys = {cy - s, cy + s, cy + s};
-//                g2.fillPolygon(xs, ys, 3);
-//            }
-//            case BigPacket big -> {
-//                g2.setColor(colorForId(big.getColorId()));
-//                g2.fillOval(cx - s, cy - s, 2 * s, 2 * s);
-//            }
-//            case BitPacket bit -> {
-//                g2.setColor(colorForId(bit.getColorId()));
-//                g2.fillOval(cx - s, cy - s, 2 * s, 2 * s);
-//                // optional index label
-//                g2.setColor(Color.WHITE);
-//                g2.setFont(getFont().deriveFont(Font.BOLD, s));
-//                String idx = String.valueOf(bit.getFragmentIdx());
-//                int w = g2.getFontMetrics().stringWidth(idx);
-//                g2.drawString(idx, cx - w / 2, cy + s / 2);
-//            }
-//            case ProtectedPacket<?> prot -> {
-//                g2.setColor(new Color(0x55_99FF));
-//                g2.fillOval(cx - s, cy - s, 2 * s, 2 * s);
-//                g2.setColor(Color.WHITE);
-//                g2.setStroke(new BasicStroke(2));
-//                g2.drawOval(cx - s, cy - s, 2 * s, 2 * s);
-//            }
-//            case SecretPacket2<?> sec -> {
-//                g2.setColor(Color.BLACK);
-//                g2.fillRect(cx - s, cy - s, 2 * s, 2 * s);
-//                g2.setColor(new Color(0x88_FF88));
-//                int pad = s / 2;
-//                g2.fillRect(cx - s + pad, cy - s + pad,
-//                        2 * (s - pad), 2 * (s - pad));
-//            }
-//            default -> {                   // graceful fallback
-//                g2.setColor(Color.GRAY);
-//                g2.drawOval(cx - s, cy - s, 2 * s, 2 * s);
-//            }
-//        }
-//    }
 /* ---------- draws one travelling packet ---------- */
 private void drawPacket(Graphics2D g2, Packet p) {
     if (p.getPoint() == null) return;

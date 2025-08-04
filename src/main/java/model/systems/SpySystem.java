@@ -18,12 +18,16 @@ public class SpySystem extends System {
         super(location, inputPorts, outputPorts, systemManager, id);
     }
     public void receivePacket(Packet packet) {
+        packet.getLine().removeMovingPacket();
+        packet.setLine(null);
         if(!(packet instanceof SecretPacket2 || packet instanceof SecretPacket1)) {
-            packets.add(packet);
+            addPacket(packet);
             packet.setSystem(this);
+            packet.isNotMoving();
         }
         else{
             systemManager.removePacket(packet);
+            packets.remove(packet);
         }
         addingCoin(packet);
     }
