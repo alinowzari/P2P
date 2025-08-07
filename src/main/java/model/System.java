@@ -25,16 +25,23 @@ public abstract class System {
         this.id = id;
     }
     public void handleBigPacketArrival(BigPacket bigPacket) {
-        for(Packet packet : packets) {
+        // 1) remove all existing packets
+        List<Packet> copy = new ArrayList<>(packets);
+        for (Packet packet : copy) {
             systemManager.removePacket(packet);
         }
+
+        // 2) now clear and add the big packet
         packets.clear();
         packets.add(bigPacket);
         bigPacketCount++;
-        if(bigPacketCount==3) {
+
+        // 3) optional destruction
+        if (bigPacketCount == 3) {
             systemManager.removeSystem(this);
         }
     }
+
     public void addPacket(Packet packet) {
         packets.add(packet);
     }

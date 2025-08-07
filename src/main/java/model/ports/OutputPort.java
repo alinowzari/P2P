@@ -10,8 +10,6 @@ public class OutputPort extends Port {
     public OutputPort(System system, Point location) {
         super(system, location);
     }
-
-
     public void movePacketThrow(Packet packet) {
         if (line == null || packet.getDoneMovement()) return;             // not wired
 

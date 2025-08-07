@@ -24,21 +24,23 @@ public final class ConfigManager {
     private ConfigManager() {
         try {
             // ---- 1. Mandatory: load the main level ---------------------------
+// modern, wrapper-aware version
             Path gameConfigPath = Paths.get("gameConfig.json");
-            this.config = ConfigLoader.loadConfig(gameConfigPath);
-
+            List<GameConfig> mainLevels = ConfigLoader.loadLevels(gameConfigPath);
+            this.config = mainLevels.getFirst();
             // ---- 2. Optional: load levels.json -------------------------------
             List<GameConfig> levels;
             try (InputStream in = getClass().getClassLoader().getResourceAsStream("levels.json")) {
                 if (in != null) {
-                    levels = ConfigLoader.loadConfigs(in);
+                    levels = ConfigLoader.loadLevels(in);
                 } else {
                     Path levelsPath = Paths.get("levels.json");
                     if (Files.exists(levelsPath)) {
-                        levels = ConfigLoader.loadConfigs(levelsPath);
-                    } else {
+                        levels = ConfigLoader.loadLevels(levelsPath);
+                    }
+                    else {
                         // No levels.json?  Use the single gameConfig as the menu list.
-                        levels = List.of(this.config);
+                        levels = mainLevels;
                     }
                 }
             }

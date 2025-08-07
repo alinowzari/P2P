@@ -3,6 +3,7 @@ package model.systems;
 import model.Line;
 import model.Packet;
 import model.SystemManager;
+import model.packets.BigPacket;
 import model.ports.*;
 import model.System;
 
@@ -20,10 +21,15 @@ public class DestroyerSystem extends System {
     }
 //    @Override
     public void receivePacket(Packet packet) {
-        // 1) shrink the packet
+        packet.getLine().removeMovingPacket();
+        packet.setLine(null);
+        if(packet instanceof BigPacket big){
+            handleBigPacketArrival(big);
+        }
         packet.shrink();
         if(packet.getSize()<=0){
             systemManager.removePacket(packet);
+            return;
         }
 
         // 2) sometimes trojan it
@@ -31,10 +37,10 @@ public class DestroyerSystem extends System {
             packet.isTrojan();
         }
 
-        // 3) queue for later sending
-        packets.add(packet);
-        packet.setSystem(this);
         addPacket(packet);
+        packet.setSystem(this);
+        packet.isNotMoving();
+        addingCoin(packet);
     }
     @Override
     public void sendPacket() {

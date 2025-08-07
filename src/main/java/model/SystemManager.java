@@ -6,6 +6,7 @@ import model.packets.ProtectedPacket;
 import model.packets.SecretPacket2;
 import model.ports.InputPort;
 import model.ports.OutputPort;
+import model.systems.AntiTrojanSystem;
 import model.systems.SpySystem;
 import model.systems.VpnSystem;
 
@@ -155,6 +156,10 @@ public class SystemManager {
             for (System sys : systems) {
                 if (!sys.getPackets().isEmpty()) {
                     sys.sendPacket();
+                }
+                //remove this if problem
+                if(sys instanceof AntiTrojanSystem) {
+                    ((AntiTrojanSystem) sys).cleanTrojan();
                 }
             }
         }

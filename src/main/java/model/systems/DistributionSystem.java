@@ -16,6 +16,8 @@ public class DistributionSystem extends System {
         super(location, inputPorts, outputPorts, systemManager, id);
     }
     public void receivePacket(Packet packet) {
+        packet.getLine().removeMovingPacket();
+        packet.setLine(null);
         // Big → split into bits
         if (packet instanceof BigPacket big) {
             handleBigPacketArrival(big);
@@ -24,15 +26,16 @@ public class DistributionSystem extends System {
 
             for (BitPacket bp : big.split()) {
                 systemManager.addPacket(bp);
-                packets.add(bp);
+                addPacket(bp);
             }
             return;
         }
 
         // else normal
-        packets.add(packet);
-        packet.setSystem(this);
         addPacket(packet);
+        packet.setSystem(this);
+        packet.isNotMoving();
+        addingCoin(packet);
     }
 
     public void sendPacket() {

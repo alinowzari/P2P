@@ -158,4 +158,59 @@ public class Line {
         double dy = a.y + t*vy - p.y;
         return Math.hypot(dx, dy);
     }
+    public float distanceAlong(Packet from, Packet to) {
+        if (from.getLine() != this || to.getLine() != this) return Float.POSITIVE_INFINITY;
+
+        // fast path – if both packets keep their progress field up-to-date
+        float d = (to.getProgress() - from.getProgress()) *
+                (float) totalLength();          // may be negative
+        return Math.abs(d);
+    }
+
+    /** First packet strictly ahead of <code>me</code> (direction→output→input). */
+    public Packet closestAhead(Packet me, float sInSeg, int segIdx) {
+        return neighbour(me, sInSeg, segIdx, /*forward*/ true);
+    }
+
+    /** First packet strictly behind <code>me</code> (direction→input→output). */
+    public Packet closestBehind(Packet me, float sInSeg, int segIdx) {
+        return neighbour(me, sInSeg, segIdx, /*forward*/ false);
+    }
+
+    /* ---------- internal ---------- */
+    private Packet neighbour(Packet me, float sInSeg, int segIdx, boolean fwd) {
+        Packet best = null;
+        float  bestDist = Float.POSITIVE_INFINITY;
+
+        // global list lives on the start-system’s manager
+        List<Packet> all = start.getParentSystem()
+                .getSystemManager().allPackets;
+
+        for (Packet p : all) {
+            if (p == me || p.getLine() != this) continue;
+
+            float dist = fwd
+                    ? distanceAlong(me, p)
+                    : distanceAlong(p , me);
+
+            if (dist > 0 && dist < bestDist) {
+                bestDist = dist;
+                best     = p;
+            }
+        }
+        return best;
+    }
+
+    /* cache total length once per wire */
+    private double totalLenCache = -1;
+    private double totalLength() {
+        if (totalLenCache < 0) {
+            List<Point> pts = getPath(0);
+            double sum = 0;
+            for (int i = 0; i < pts.size() - 1; i++)
+                sum += pts.get(i).distance(pts.get(i + 1));
+            totalLenCache = sum;
+        }
+        return totalLenCache;
+    }
 }

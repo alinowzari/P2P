@@ -22,6 +22,9 @@ public class VpnSystem extends System {
     public void receivePacket(Packet packet) {
         packet.getLine().removeMovingPacket();
         packet.setLine(null);
+        if(packet instanceof BigPacket big){
+            handleBigPacketArrival(big);
+        }
         if (packet instanceof ProtectedPacket<?> pp) {
             SecretPacket2<?> secret = pp.changePacket();
             secret.setSystemId(id);

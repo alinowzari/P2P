@@ -205,7 +205,8 @@ public class InfinityPacket extends Packet implements MessengerTag {
                 if (remaining < segRemain) {
                     sInSeg += remaining;
                     remaining = 0f;
-                } else {
+                }
+                else {
                     remaining -= segRemain;
                     segIdx++;  sInSeg = 0f;
                 }
@@ -234,9 +235,9 @@ public class InfinityPacket extends Packet implements MessengerTag {
 
         /* 3 ▸ arrival handling */
         if (segIdx >= segLen.size()) {                       // reached end
-            finishTraversal(line.getEnd().getParentSystem());
+            line.getEnd().getParentSystem().receivePacket(this);
         } else if (segIdx < 0) {                             // returned home
-            finishTraversal(line.getStart().getParentSystem());
+            line.getStart().getParentSystem().receivePacket(this);
         }
     }
 
@@ -253,10 +254,6 @@ public class InfinityPacket extends Packet implements MessengerTag {
         isMoving = true;
     }
 
-    /* helper: when packet leaves the line */
-    private void finishTraversal(System target) {
-        line.getEnd().getParentSystem().receivePacket(this);
-    }
     @Override
     protected void resetPath() {
         path    = null;

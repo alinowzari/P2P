@@ -25,6 +25,7 @@ public record GameConfig(
     public static record PacketConfig(
             int packetId,
             String type,
-            int count
+            int count,
+            int colorId
     ) { }
 }

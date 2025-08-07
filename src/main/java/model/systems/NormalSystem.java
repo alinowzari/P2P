@@ -20,6 +20,9 @@ public class NormalSystem extends System {
     public void receivePacket(Packet packet){
         packet.getLine().removeMovingPacket();
         packet.setLine(null);
+        if(packet instanceof BigPacket big){
+            handleBigPacketArrival(big);
+        }
         addPacket(packet);
         packet.setSystem(this);
         packet.isNotMoving();

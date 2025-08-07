@@ -19,6 +19,11 @@ public class MergerSystem extends System{
 
     }
     public void receivePacket(Packet packet) {
+        packet.getLine().removeMovingPacket();
+        packet.setLine(null);
+        if(packet instanceof BigPacket big){
+            handleBigPacketArrival(big);
+        }
         if (packet instanceof BitPacket bit) {
             bins.computeIfAbsent(bit.getParentId(), k -> new ArrayList<>())
                     .add(bit);
@@ -30,24 +35,37 @@ public class MergerSystem extends System{
         packet.setSystem(this);
         addingCoin(packet);
     }
-
+    // MergerSystem.java
+// MergerSystem.java
     private void checkMerge(int parentId) {
-        ArrayList<BitPacket> list = bins.get(parentId);
-        if (list == null) return;
 
-        int expected = list.get(0).getParentLength();
+        ArrayList<BitPacket> family = bins.get(parentId);
+        if (family == null || family.isEmpty()) return;
 
-        if (list.size() == expected) {
-            // remove fragments from global list
-            for (BitPacket bp : list) systemManager.removePacket(bp);
+        int expected = family.get(0).getParentLength();
+        if (family.size() < expected) return;            // wait for more bits
 
-            BigPacket big = new BigPacket(expected, list.get(0).getColorId());
-            systemManager.addPacket(big);
-            packets.add(big);          // now route like normal
-
-            bins.remove(parentId);
+        /* ----- all pieces present: remove fragments from model ----- */
+        for (BitPacket bp : family){
+            systemManager.removePacket(bp);
         }
+
+        /* ----- reconstruct the correct concrete Big-packet ---------- */
+        int colour = family.get(0).getColorId();
+        Packet rebuilt;
+        if (family.get(0).getParentLength()==8) {
+            rebuilt = new BigPacket1(colour);
+        }
+        else  {
+            rebuilt = new BigPacket2(colour);
+        }
+
+        systemManager.addPacket(rebuilt);   // global registry
+        packets.add(rebuilt);               // queue locally for routing
+        bins.remove(parentId);              // bin done
     }
+
+
     public void sendPacket() {
 
         /* 1 ── nothing to do if we have no packets */

@@ -2,6 +2,7 @@ package model.systems;
 
 import model.*;
 import model.System;
+import model.packets.BigPacket;
 import model.packets.ProtectedPacket;
 import model.packets.SecretPacket1;
 import model.packets.SecretPacket2;
@@ -14,63 +15,42 @@ import java.util.List;
 
 public class SpySystem extends System {
     private final Random rng = new Random();
+
     public SpySystem(Point location, List<InputPort> inputPorts, List<OutputPort> outputPorts, SystemManager systemManager, int id) {
         super(location, inputPorts, outputPorts, systemManager, id);
     }
+
     public void receivePacket(Packet packet) {
         packet.getLine().removeMovingPacket();
         packet.setLine(null);
-        if(!(packet instanceof SecretPacket2 || packet instanceof SecretPacket1)) {
+        if(packet instanceof BigPacket big){
+            handleBigPacketArrival(big);
+        }
+        if (packet instanceof SecretPacket2 || packet instanceof SecretPacket1) {
+            systemManager.removePacket(packet);
+            packets.remove(packet);
+            return;
+        }
+        if(isSpecialShape(packet)) {
+            SpySystem spy=systemManager.getAllSpySystems().get(rng.nextInt(systemManager.getAllSpySystems().size()));
+            spy.addPacket(packet);
+            packet.setSystem(spy);
+            packet.isNotMoving();
+            addingCoin(packet);
+            spy.sendPacket();
+        }
+        else {
             addPacket(packet);
             packet.setSystem(this);
             packet.isNotMoving();
+            addingCoin(packet);
         }
-        else{
-            systemManager.removePacket(packet);
-            packets.remove(packet);
-        }
-        addingCoin(packet);
-    }
-    public void changeSystem() {
-        if (packets.isEmpty()) return;
-
-        // pop the head packet
-        Packet head = packets.remove(0);
-        if(head.getDoneMovement())return;
-        // 1) Protected/secret → just send it out normally
-        if (head instanceof ProtectedPacket) {
-            // re-queue at front so sendPacket picks it up
-            packets.add(0, head);
-            sendPacket();
-            return;
-        }
-
-        // 2) ∞, ■ or ▲ → forward to another spy then dispatch there
-        if (isSpecialShape(head)) {
-            // find all other spies
-            ArrayList<SpySystem> all = systemManager.getAllSpySystems();
-            ArrayList<SpySystem> others = new ArrayList<>(all);
-            others.removeIf(s -> s.id == this.id);
-
-            if (!others.isEmpty()) {
-                SpySystem peer = others.get(rng.nextInt(others.size()));
-                // directly hand off
-                peer.receivePacket(head);
-                peer.sendPacket();    // immediately send it from their queue
-                return;
-            }
-            // else no other spy → fall through to normal send
-        }
-
-        // 3) Anything else: re-queue and send normally
-        packets.add(0, head);
-        sendPacket();
     }
     public void sendPacket() {
         // identical routing logic to NormalSystem
-//        if (packets.isEmpty()) {
-//            return;
-//        }
+        if (packets.isEmpty()) {
+            return;
+        }
         Packet packet = packets.get(0);
 
         ArrayList<OutputPort> compatible   = new ArrayList<>();

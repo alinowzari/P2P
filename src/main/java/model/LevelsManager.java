@@ -95,12 +95,18 @@ public class LevelsManager {
                 for (PacketConfig pc : sc.initialPackets()) {
                     for (int i = 0; i < pc.count(); i++) {
                         Packet pkt = switch (pc.type()) {
-                            case "SquarePacket"   -> new SquarePacket();
+                            case "SquarePacket" -> new SquarePacket();
                             case "TrianglePacket" -> new TrianglePacket();
                             case "InfinityPacket" -> new InfinityPacket();
-                            default                -> new SquarePacket();
+                            case "BigPacket1" -> new BigPacket1(pc.colorId());
+                            case "BigPacket2" -> new BigPacket2(pc.colorId());
+                            case "ProtectedPacket" -> new ProtectedPacket<>(new SquarePacket());
+                            case "SecretPacket1" -> new SecretPacket1();
+                            case "SecretPacket2" -> new SecretPacket2<>(new ProtectedPacket<>(new SquarePacket()));
+                            default ->
+                                    throw new IllegalArgumentException("Unknown packet type: " + pc.type());
                         };
-                        sys.addPacket(pkt);
+                         sys.addPacket(pkt);
                         sm.addPacket(pkt);
                     }
                 }

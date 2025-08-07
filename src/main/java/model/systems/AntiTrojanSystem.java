@@ -2,6 +2,7 @@ package model.systems;
 import model.Line;
 import model.Packet;
 import model.SystemManager;
+import model.packets.BigPacket;
 import model.ports.*;
 import model.System;
 
@@ -19,9 +20,14 @@ public class AntiTrojanSystem extends System {
         super(location, inputPorts, outputPorts, systemManager, id);
     }
     public void receivePacket(Packet packet) {
-        // just queue everything — cleaning is a separate step
-        packets.add(packet);
+        packet.getLine().removeMovingPacket();
+        packet.setLine(null);
+        if(packet instanceof BigPacket big){
+            handleBigPacketArrival(big);
+        }
+        addPacket(packet);
         packet.setSystem(this);
+        packet.isNotMoving();
         addingCoin(packet);
     }
 
