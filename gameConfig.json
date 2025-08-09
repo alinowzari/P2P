@@ -72,7 +72,7 @@
         },
         {
           "id": 7,
-          "type": "SpySystem",
+          "type": "NormalSystem",
           "position": { "x": 300, "y": 100 },
           "inputPorts":  ["InfinityPort", "SquarePort", "TrianglePort"],
           "outputPorts": ["SquarePort"],

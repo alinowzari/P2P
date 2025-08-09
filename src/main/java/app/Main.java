@@ -7,6 +7,7 @@ import java.awt.*;
 import controller.LevelsController;
 import controller.MenuController;
 //import controller.LevelsController;
+import model.GameStatus;
 import model.LevelsManager;
 import view.LevelsView;
 import view.MenuView;

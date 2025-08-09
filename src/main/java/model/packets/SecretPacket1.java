@@ -13,7 +13,7 @@ public class SecretPacket1 extends Packet {
 
     /* design constants ------------------------------------------------ */
     private static final float FAST  = 2f;      // px / s
-    private static final float CRAWL = 0.01f;
+    private static final float CRAWL = 1f;
 
     /* per-wire state --------------------------------------------------- */
     private List<Point> path;
@@ -83,7 +83,7 @@ public class SecretPacket1 extends Packet {
                 sInSeg / segLen.get(segIdx));
     }
 
-    @Override                       /* called by beginTraversal(...)   */
+    @Override
     protected void resetPath() {
         path = null; segLen = null;
         segIdx = 0; sInSeg = 0f;

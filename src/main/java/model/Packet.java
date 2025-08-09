@@ -118,7 +118,6 @@ public abstract class Packet {
         isMoving = true;
         system   = null;
         progress = 0f;
-
         // subclasses will override and clear their own cached paths
         resetPath();
 

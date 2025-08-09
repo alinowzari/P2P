@@ -14,6 +14,7 @@ import model.systems.*;
 
 import java.awt.Point;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -21,6 +22,7 @@ import java.util.Objects;
  * Manages all game levels by creating a SystemManager for each configured level.
  */
 public class LevelsManager {
+    public static GameStatus gameStatus = new GameStatus();
     private final List<GameConfig> configs;
     private final List<SystemManager> levelManagers;
     public LevelsManager() {
@@ -30,7 +32,7 @@ public class LevelsManager {
 
         // Build a SystemManager for each level
         for (GameConfig cfg : configs) {
-            SystemManager sm = new SystemManager();
+            SystemManager sm = new SystemManager(gameStatus);
 
             // For each system defined in this level
             for (SystemConfig sc : cfg.systems()) {
@@ -106,12 +108,13 @@ public class LevelsManager {
                             default ->
                                     throw new IllegalArgumentException("Unknown packet type: " + pc.type());
                         };
-                         sys.addPacket(pkt);
+                        sys.addPacket(pkt);
                         sm.addPacket(pkt);
+                        //new line, removed if fucked up:
+                        sm.addToFirstCountPacket();
                     }
                 }
             }
-
             // Store this level's manager
             levelManagers.add(sm);
         }

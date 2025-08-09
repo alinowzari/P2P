@@ -86,11 +86,8 @@ public class BigPacket1 extends BigPacket {
 
         /* ----- 4: arrival at destination port ----- */
         if (segIdx >= segLen.size()) {
-            line.removeMovingPacket();
-            line.getEnd().transferPacket(this);
-            setSystem(line.getEnd().getParentSystem());
-            setLine(null);
             isMoving = false;
+            getLine().getEnd().getParentSystem().receivePacket(this);
         }
     }
 

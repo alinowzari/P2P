@@ -1,0 +1,7 @@
+{
+  "totalCoinCount": 0,
+  "levels": [
+    { "levelName": "Level 1", "coins": 0, "passed": false },
+    { "levelName": "Level 2", "coins": 0, "passed": false }
+  ]
+}

@@ -28,16 +28,20 @@ public class SystemManager {
     private HashMap<Integer, ArrayList<BitPacket>> bigPackets;
     private boolean isReady;
     private boolean launched;
-    public boolean test;
+    private boolean isLevelPassed;
+    private int firstCountPacket;
+    private int receivedPacket;
     private static final float DT = dt;
     public int coinCount = 0;
-    public SystemManager() {
+    public static GameStatus gameStatus;
+    public SystemManager(GameStatus gameStatus) {
         systems = new ArrayList<>();
         spySystems = new ArrayList<>();
         vpnSystems = new ArrayList<>();
         allPackets = new ArrayList<>();
         allLines = new ArrayList<>();
         bigPackets = new HashMap<>();
+        this.gameStatus = gameStatus;
     }
 
     public void addSystem(System system) {
@@ -51,8 +55,16 @@ public class SystemManager {
     }
 
     public void removeSystem(System system) {
+        for(Line line : allLines) {
+            if(system.getInputPorts().contains(line.getEnd()) ||  system.getOutputPorts().contains(line.getStart())) {
+                if(line.getMovingPacket() != null) {
+                    removePacket(line.getMovingPacket());
+                }
+                line.setMovingPacket(null);
+                removeLine(line);
+            }
+        }
         systems.remove(system);
-
         if (system instanceof SpySystem spy) {
             spySystems.remove(spy);
         }
@@ -137,6 +149,10 @@ public class SystemManager {
     public void launchPackets() { launched = true; }
     public void addCoin(int plus){coinCount+=plus;}
     public void update(float dt) {
+        //new line
+        if(receivedPacket>=(firstCountPacket/2)){
+            isLevelPassed = true;
+        }
         for (Line l : allLines) {
             Packet pkt = l.getMovingPacket();
             if (pkt != null) {
@@ -163,6 +179,14 @@ public class SystemManager {
                 }
             }
         }
+        //new lines
+        if(isLevelPassed && allPackets.isEmpty()){
+            java.lang.System.out.println("you win");
+        }
+        else if(!isLevelPassed && allPackets.isEmpty()){
+            java.lang.System.out.println("you lose");
+        }
+        //
     }
     private boolean allOutputsConnected(System s) {
         for (OutputPort op : s.getOutputPorts())
@@ -207,6 +231,7 @@ public class SystemManager {
         double projX = a.x + t*dx, projY = a.y + t*dy;
         return p.distance(projX, projY);
     }
-    /* ================================================================ */
-
+    public boolean isLevelPassed() {return isLevelPassed;}
+    public void addToFirstCountPacket(){firstCountPacket++;}
+    public void addToReceivedPacket(){receivedPacket++;}
 }

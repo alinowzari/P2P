@@ -81,6 +81,7 @@ public class BigPacket2 extends BigPacket {
 
         /* 3 ▸ arrival check ------------------------------------------------------- */
         if (segIdx >= segLen.size()) {
+            isMoving = false;
             line.getEnd().getParentSystem().receivePacket(this);
         }
     }

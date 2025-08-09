@@ -33,7 +33,10 @@ public abstract class System {
 
         // 2) now clear and add the big packet
         packets.clear();
-        packets.add(bigPacket);
+//        addPacket(bigPacket);
+//        bigPacket.setSystem(this);
+//        bigPacket.isNotMoving();
+//        addingCoin(bigPacket);
         bigPacketCount++;
 
         // 3) optional destruction

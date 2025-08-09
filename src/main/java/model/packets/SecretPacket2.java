@@ -1,9 +1,7 @@
 package model.packets;
 
-import model.Packet;
-import model.Port;
+import model.*;
 import model.System;
-import model.Line;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -58,32 +56,65 @@ public final class SecretPacket2<P extends Packet & MessengerTag> extends Packet
     public int               getSystemId()       { return systemId; }
 
     /* ================= movement ================== */
+    /* ================= movement ================== */
     @Override
     public void advance(float dt) {
-        if (line == null) return;         // not travelling
+        /* ── 0 ▸ bail if we’re not attached to a wire ─────────────────── */
+        if (line == null) return;
 
-        /* 0 ▸ cache geometry once */
+        /* ── 1 ▸ one-time geometry cache ──────────────────────────────── */
         if (path == null) initPathTables();
 
-        /* 1 ▸ look for neighbours */
-        Packet ahead  = line.closestAhead (this, sInSeg, segIdx);
-        Packet behind = line.closestBehind(this, sInSeg, segIdx);
+    /* ── 2 ▸ “protection zone” check --------------------------------
+       We look at every other packet on the *same* line.  If any are
+       inside a circle of radius SAFE_GAP around our current point,
+       we step *away* from their barycentre; otherwise we cruise fwd. */
+        /* ── 2 ▸ protection-zone scan (all packets, not only same wire) ───── */
+        double avgX = 0, avgY = 0;
+        int    hits = 0;
 
-        boolean tooCloseFwd  = ahead  != null &&
-                line.distanceAlong(this, ahead ) < SAFE_GAP;
-        boolean tooCloseBack = behind != null &&
-                line.distanceAlong(behind, this) < SAFE_GAP;
+        /* any packet that currently has a visible point counts */
+        SystemManager mgr =
+                line.getStart().getParentSystem().getSystemManager();
 
-        if (tooCloseFwd && !tooCloseBack)      dir = -1;  // retreat
-        else if (tooCloseBack && !tooCloseFwd) dir = +1;  // advance
-        else                                   dir = 0;   // hover
+        for (Packet other : mgr.allPackets) {
+            if (other == this) continue;              // skip self
+            Point op = other.getPoint();
+            if (op == null) continue;                 // queued somewhere
 
-        /* 2 ▸ integrate arc-length */
+            if (point.distance(op) < SAFE_GAP) {      // inside protection zone
+                avgX += op.x;  avgY += op.y;  hits++;
+            }
+        }
+
+        /* decide direction: +1 fwd, −1 back, 0 hover */
+        dir = +1;                                     // default  forward
+        if (hits > 0) {
+            avgX /= hits;  avgY /= hits;              // barycentre of intruders
+
+            /* unit tangent of current segment */
+            Point a = path.get(segIdx);
+            Point b = path.get(segIdx + 1);
+            double tx = b.x - a.x, ty = b.y - a.y;
+            double len = Math.hypot(tx, ty);
+            if (len > 0) { tx /= len; ty /= len; }
+
+            /* vector from us to barycentre */
+            double vx = avgX - point.x;
+            double vy = avgY - point.y;
+
+            double dot = tx*vx + ty*vy;
+            if (Math.abs(dot) < 1e-6) dir = 0;         // side-by-side  → hover
+            else dir = (dot > 0) ? -1 : +1;            // ahead → retreat, behind → advance
+        }
+
+
+        /* ── 3 ▸ integrate arc-length ----------------------------------- */
         float remaining = dir * BASE_SPEED * dt;
 
         while (remaining != 0f && segIdx >= 0 && segIdx < segLen.size()) {
 
-            if (remaining > 0f) {                        // → forward
+            if (remaining > 0f) {                      // → forward
                 float segRemain = segLen.get(segIdx) - sInSeg;
                 if (remaining < segRemain) {
                     sInSeg += remaining;
@@ -92,7 +123,7 @@ public final class SecretPacket2<P extends Packet & MessengerTag> extends Packet
                     remaining -= segRemain;
                     segIdx++;  sInSeg = 0f;
                 }
-            } else {                                     // ← backward
+            } else {                                   // ← backward
                 float stepBack = Math.min(-remaining, sInSeg);
                 sInSeg -= stepBack;
                 remaining += stepBack;
@@ -104,18 +135,17 @@ public final class SecretPacket2<P extends Packet & MessengerTag> extends Packet
             updatePoint();
         }
 
-        /* 3 ▸ attempt arrival at either end (only if safe) */
-        if (segIdx >= segLen.size()) {                   // destination end
-            if (!tooCloseBack) {
-                line.getEnd().getParentSystem().receivePacket(this);
-            }
+        /* ── 4 ▸ arrival at either end (clean-up done by System) ───────── */
+        if (segIdx >= segLen.size()) {                  // destination end
+            line.getEnd().getParentSystem().receivePacket(this);
+            isMoving = false; setLine(null);            // detach once
         }
-        else if (segIdx < 0) {                         // origin end
-            if (!tooCloseFwd) {
-                line.getStart().getParentSystem().receivePacket(this);
-            }
+        else if (segIdx < 0) {                          // origin end
+            line.getStart().getParentSystem().receivePacket(this);
+            isMoving = false; setLine(null);
         }
     }
+
 
     /* ---------- helpers ---------- */
     private void initPathTables() {

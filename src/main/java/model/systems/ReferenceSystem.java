@@ -13,12 +13,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ReferenceSystem extends System {
-    int receivedCount = 0;
     public ReferenceSystem(Point location, List<InputPort> inputPorts, List<OutputPort> outputPorts, SystemManager systemManager, int id) {
         super(location, inputPorts, outputPorts, systemManager, id);
     }
     public void receivePacket(Packet packet) {
-        receivedCount++;
+        //new line remove if fucked up
+        systemManager.addToReceivedPacket();
         systemManager.removePacket(packet);
         packet.getLine().removeMovingPacket();
         packet.setLine(null);
@@ -59,8 +59,4 @@ public class ReferenceSystem extends System {
             packets.remove(packet);
         }
     }
-    public int getReceivedCount() {
-        return receivedCount;
-    }
-    public void addToReceivedCount() {receivedCount++;}
 }

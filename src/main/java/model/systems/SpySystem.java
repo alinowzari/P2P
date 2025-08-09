@@ -31,7 +31,7 @@ public class SpySystem extends System {
             packets.remove(packet);
             return;
         }
-        if(isSpecialShape(packet)) {
+        else if(isSpecialShape(packet)) {
             SpySystem spy=systemManager.getAllSpySystems().get(rng.nextInt(systemManager.getAllSpySystems().size()));
             spy.addPacket(packet);
             packet.setSystem(spy);

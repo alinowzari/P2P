@@ -12,11 +12,4 @@ public class InputPort extends Port {
     public InputPort(System system, Point location) {
         super(system, location);
     }
-    public void transferPacket(Packet packet) {
-        parentSystem.addPacket(packet);
-        if(parentSystem instanceof ReferenceSystem){
-            ((ReferenceSystem) parentSystem).addToReceivedCount();
-            packet.doneMovement();
-        }
-    }
 }
