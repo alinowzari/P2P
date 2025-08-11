@@ -11,9 +11,12 @@ public abstract class Packet {
     protected  Line line;
     protected Type type;
     protected int size;
+    protected int noise;
     protected float progress=0.1f;
     protected float speed;
     protected float acceleration;
+    private float accelResume;              // where to restore to
+    private long  accelSuppressedUntil = 0;
     protected Point point;
     protected boolean isMoving;
     protected boolean trojan;
@@ -38,8 +41,8 @@ public abstract class Packet {
 
 
     public void shrink() {
-        if (size > 0) {
-            size--;
+        if (size > noise) {
+            size++;
         }
     }
     public abstract void wrongPort(Port port);
@@ -69,7 +72,7 @@ public abstract class Packet {
     public void  setSpeed(float s)        { speed = s; }
 
     public float getAcceleration()        { return acceleration; }
-    public void  setAcceleration(float a) { acceleration = a; }
+//    public void  setAcceleration(float a) { acceleration = a; }
 
 
     public void advance(float dt) {
@@ -128,4 +131,42 @@ public abstract class Packet {
     public void doneMovement() {doneMovement = true;}
     public boolean getDoneMovement(){return doneMovement;}
     public void isNotMoving(){isMoving = false;}
+
+    public Point getScreenPosition() { return point; }
+
+    /** Called when a Reset-Center effect is hit. Default: no-op. */
+    public void resetCenterDrift() { /* default no drift */ }
+
+
+    /** If currently suppressed, we update the resume target instead. */
+    public void setAcceleration(float a) {
+        if (accelSuppressedUntil != 0) {
+            accelResume = a;                // keep intent for when suppression ends
+        } else {
+            this.acceleration = a;
+        }
+    }
+
+    /** Apply "acceleration = 0" for `durationNanos`. Extends if already active. */
+    public void suppressAccelerationForNanos(long durationNanos) {
+        long now = java.lang.System.nanoTime();
+        if (accelSuppressedUntil == 0) {
+            accelResume = acceleration;     // first time: remember current accel
+        }
+        long until = now + durationNanos;
+        if (until > accelSuppressedUntil) { // refresh/extend window
+            accelSuppressedUntil = until;
+        }
+        this.acceleration = 0f;
+    }
+
+    /** Call each frame to auto-restore when time is up. */
+    public void updateTimedEffects(long now) {
+        if (accelSuppressedUntil != 0 && now >= accelSuppressedUntil) {
+            this.acceleration = accelResume;
+            accelSuppressedUntil = 0;
+        }
+    }
+
+    public boolean isAccelerationSuppressed() { return accelSuppressedUntil != 0; }
 }

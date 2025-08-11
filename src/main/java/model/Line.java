@@ -5,6 +5,7 @@ import model.ports.OutputPort;
 
 import javax.lang.model.type.ArrayType;
 import java.awt.*;
+import java.lang.System;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
@@ -15,6 +16,12 @@ public class Line {
     private boolean isOccupied;
     private Packet movingPacket;
     private final ArrayList<BendPoint> bendPoints;
+    public final ArrayList<Point> accelerationZero = new ArrayList<>();
+    private final ArrayList<Long> azExpiry = new ArrayList<>();
+    public final ArrayList<Point> getBackToCenter = new ArrayList<>();
+    private final ArrayList<Long> gbcExpiry = new ArrayList<>();
+
+    private static final long DURATION_NANOS = 20_000_000_000L;
     public Line(OutputPort start, InputPort end) {
         this.start = start;
         this.end = end;
@@ -212,5 +219,53 @@ public class Line {
             totalLenCache = sum;
         }
         return totalLenCache;
+    }
+
+    //new code remove if fucked up
+    public void addChangeCenter(Point click) {
+        Point at = closestPointOnPath(click);              // snap to wire
+        getBackToCenter.add(at);
+        gbcExpiry.add(System.nanoTime() + DURATION_NANOS);
+    }
+    /** call once per tick */
+    public void cullExpiredChangeCenters(long now) {
+        for (int i = getBackToCenter.size() - 1; i >= 0; i--) {
+            if (now >= gbcExpiry.get(i)) {
+                getBackToCenter.remove(i);
+                gbcExpiry.remove(i);
+            }
+        }
+    }
+    public void addZeroAccelPoint(Point click) {
+        Point at = closestPointOnPath(click); // snap to wire
+        accelerationZero.add(at);
+        azExpiry.add(System.nanoTime() + DURATION_NANOS);
+    }
+    public void cullExpiredZeroAccelPoints(long now) {
+        for (int i = accelerationZero.size() - 1; i >= 0; i--) {
+            if (now >= azExpiry.get(i)) {
+                accelerationZero.remove(i);
+                azExpiry.remove(i);
+            }
+        }
+    }
+    public Point closestPointOnPath(Point click) {
+        List<Point> pts = getPath(6);
+        double bestD = Double.POSITIVE_INFINITY;
+        Point best = pts.get(0);
+        for (int i=0; i<pts.size()-1; i++) {
+            Point a = pts.get(i), b = pts.get(i+1);
+            Point proj = projectPointToSegment(click, a, b);
+            double d = click.distance(proj);
+            if (d < bestD) { bestD = d; best = proj; }
+        }
+        return best;
+    }
+    private static Point projectPointToSegment(Point p, Point a, Point b) {
+        double dx = b.x - a.x, dy = b.y - a.y;
+        if (dx == 0 && dy == 0) return new Point(a);
+        double t = ((p.x - a.x)*dx + (p.y - a.y)*dy) / (dx*dx + dy*dy);
+        t = Math.max(0, Math.min(1, t));
+        return new Point((int)Math.round(a.x + t*dx), (int)Math.round(a.y + t*dy));
     }
 }

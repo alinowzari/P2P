@@ -115,13 +115,7 @@ public class SquarePacket extends Packet implements MessengerTag {
     }
 
     /* ------------------------------------------------------------------ */
-    @Override public void advance(float dt) { moveForward(dt); }
-
-    /* main per-frame routine ------------------------------------------- */
-    private void moveForward(float dt) {
-
-        /* 0 ▸ ensure we have a path + segment table */
-        if (path == null) initialisePath();
+    @Override public void advance(float dt) { if (path == null) initialisePath();
 
         /* 1 ▸ physics */
         speed += acceleration * dt;
@@ -146,6 +140,7 @@ public class SquarePacket extends Packet implements MessengerTag {
             line.getEnd().getParentSystem().receivePacket(this);
         }
     }
+
 
     /* ---------- helpers ---------- */
 

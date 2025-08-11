@@ -17,6 +17,8 @@ import java.util.List;
 import static model.Packet.dt;
 
 public class SystemManager {
+    private static final int EFFECT_RADIUS_PX = 10;
+    private static final long NANO_20S = 20_000_000_000L;
     ArrayList<System> systems;
     ArrayList<SpySystem> spySystems;
     ArrayList<VpnSystem> vpnSystems;
@@ -34,6 +36,8 @@ public class SystemManager {
     private static final float DT = dt;
     public int coinCount = 0;
     public static GameStatus gameStatus;
+    private String levelName;          // NEW
+    private boolean winCommitted = false;
     public SystemManager(GameStatus gameStatus) {
         systems = new ArrayList<>();
         spySystems = new ArrayList<>();
@@ -42,8 +46,9 @@ public class SystemManager {
         allLines = new ArrayList<>();
         bigPackets = new HashMap<>();
         this.gameStatus = gameStatus;
+        isLevelPassed = false;
+        winCommitted = gameStatus.isLevelPassed(levelName);
     }
-
     public void addSystem(System system) {
         systems.add(system);
         if (system instanceof SpySystem spy) {
@@ -53,21 +58,25 @@ public class SystemManager {
             vpnSystems.add(vpn);
         }
     }
-
     public void removeSystem(System system) {
-        for(Line line : allLines) {
-            if(system.getInputPorts().contains(line.getEnd()) ||  system.getOutputPorts().contains(line.getStart())) {
-                if(line.getMovingPacket() != null) {
-                    removePacket(line.getMovingPacket());
+        // safely remove all incident lines
+        Iterator<Line> it = allLines.iterator();
+        while (it.hasNext()) {
+            Line line = it.next();
+            boolean incident = system.getInputPorts().contains(line.getEnd())
+                    || system.getOutputPorts().contains(line.getStart());
+            if (incident) {
+                Packet mp = line.getMovingPacket();
+                if (mp != null) {
+                    removePacket(mp);      // will also pull it out of any system queue
+//                    line.setMovingPacket(null);
                 }
-                line.setMovingPacket(null);
-                removeLine(line);
+                it.remove();               // <- safe removal during iteration
             }
         }
+
         systems.remove(system);
-        if (system instanceof SpySystem spy) {
-            spySystems.remove(spy);
-        }
+        if (system instanceof SpySystem spy) spySystems.remove(spy);
         if (system instanceof VpnSystem vpn) {
             vpnSystems.remove(vpn);
             handleVpnDestruction(vpn.getId());
@@ -88,8 +97,6 @@ public class SystemManager {
             }
         }
     }
-
-
     public void handleVpnDestruction(int vpnId) {
         // 1) First unwrap in every system’s queue
         for (System sys : systems) {
@@ -143,7 +150,6 @@ public class SystemManager {
     }
     public void addLine(Line line) {allLines.add(line);}
     public void removeLine(Line line) {allLines.remove(line);}
-
     public boolean isReady() {return isReady;}
     public boolean isLaunched() {return launched;}
     public void launchPackets() { launched = true; }
@@ -153,11 +159,44 @@ public class SystemManager {
         if(receivedPacket>=(firstCountPacket/2)){
             isLevelPassed = true;
         }
-        for (Line l : allLines) {
+//        for (Line l : allLines) {
+//            Packet pkt = l.getMovingPacket();
+//            if (pkt != null) {
+//                pkt.advance(dt);              // polymorphic – each subclass decides
+//            }
+//        }
+        long now = java.lang.System.nanoTime();
+        List<Line> lines = new ArrayList<>(allLines);
+        for (Line l : lines) {
+            l.cullExpiredChangeCenters(now);
+            l.cullExpiredZeroAccelPoints(now);
             Packet pkt = l.getMovingPacket();
+
             if (pkt != null) {
-                pkt.advance(dt);              // polymorphic – each subclass decides
+                Point pos = pkt.getScreenPosition();
+                if (pos != null && !l.accelerationZero.isEmpty()) {
+                    for (Point z : new ArrayList<>(l.accelerationZero)) {
+                        if (pos.distance(z) <= EFFECT_RADIUS_PX) {
+                            pkt.suppressAccelerationForNanos(NANO_20S);
+                            break;
+                        }
+                    }
+                }
+
+                if (pos != null && !l.getBackToCenter.isEmpty()) {
+                    // iterate over a snapshot of points as well (paranoid-safe)
+                    for (Point trigger : new ArrayList<>(l.getBackToCenter)) {
+                        if (pos.distance(trigger) <= EFFECT_RADIUS_PX) {
+                            pkt.resetCenterDrift();
+                            break;
+                        }
+                    }
+                }
+                pkt.advance(dt);
             }
+        }
+        for (Packet p : new ArrayList<>(allPackets)) {
+            p.updateTimedEffects(now);
         }
 
         /* -------- 2: try to send from every fully-wired system -------- */
@@ -182,6 +221,8 @@ public class SystemManager {
         //new lines
         if(isLevelPassed && allPackets.isEmpty()){
             java.lang.System.out.println("you win");
+            winCommitted=true;
+            gameStatus.commitWin(levelName, coinCount);
         }
         else if(!isLevelPassed && allPackets.isEmpty()){
             java.lang.System.out.println("you lose");
@@ -231,7 +272,19 @@ public class SystemManager {
         double projX = a.x + t*dx, projY = a.y + t*dy;
         return p.distance(projX, projY);
     }
-    public boolean isLevelPassed() {return isLevelPassed;}
     public void addToFirstCountPacket(){firstCountPacket++;}
     public void addToReceivedPacket(){receivedPacket++;}
+    public void setLevelName(String levelName) {   // NEW
+        this.levelName = levelName;
+    }
+    public int getTotalCoins() {
+        return (gameStatus != null) ? gameStatus.getTotalCoin() : 0; // adjust getter name if different
+    }
+    public boolean spendTotalCoins(int amount) {
+        if (gameStatus == null) return false;
+        int cur = gameStatus.getTotalCoin();                // <-- use your real API
+        if (cur < amount) return false;
+        gameStatus.setTotalCoin(cur - amount);              // <-- use your real API
+        return true;
+    }
 }

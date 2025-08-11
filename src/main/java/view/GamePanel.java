@@ -29,6 +29,7 @@ public class GamePanel extends JPanel {
     private final SystemManager model;
     private final JLabel statusLabel = new JLabel("Ready: false");
     private final JLabel coinLabel = new JLabel("Coins: 0");
+    private final JLabel totalLabel = new JLabel("Total: 0");
     /* dashed rubber-band preview during drag */
     private Point previewA, previewB;
     private Point hMid, hA, hB;
@@ -39,6 +40,8 @@ public class GamePanel extends JPanel {
         setLayout(null);
         statusLabel.setBounds(10, 10, 120, 20);
         coinLabel.setBounds(10, 30, 120, 20);
+        totalLabel.setBounds(10, 50, 120, 20);
+        add(totalLabel);
         add(statusLabel);
         add(coinLabel);
     }
@@ -126,7 +129,10 @@ public class GamePanel extends JPanel {
 
         statusLabel.setText("Ready: " + model.isReady());
         coinLabel.setText("Coins: " + model.coinCount);
-
+        String totalTxt = "Total: " + model.getTotalCoins();
+        totalLabel.setText(totalTxt);
+        int w = totalLabel.getPreferredSize().width;
+        totalLabel.setBounds(getWidth() - w - 10, 10, w, 20);
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);

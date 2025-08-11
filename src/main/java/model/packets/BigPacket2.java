@@ -3,8 +3,6 @@ package model.packets;
 import model.Line;
 import model.Packet;
 import model.Port;
-import model.System;
-import model.systems.DistributionSystem;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -13,135 +11,168 @@ import java.util.List;
 import static model.Type.BIG;
 
 /**
- * “Big-2” packet:
- * • size 8, carries a colour id (so resulting bits share a colour)
- * • moves along the wire like the other packets (segIdx / sInSeg scheme)
- * • never splits in flight; splits ONLY when the destination system is a
- *   DistributionSystem (handled in advance()).
- * • rendered with a gentle perpendicular wiggle so its centre drifts
- *   a few pixels left/right of the line, simulating an impact.
+ * BigPacket2
+ * - Moves along the wire like other packets (segIdx / sInSeg marching).
+ * - Adds a sideways wiggle (perpendicular to the segment).
+ * - Every STEP_INTERVAL pixels of arc-length, the packet permanently rises
+ *   by RISE_STEP pixels in screen space (negative Y).
  */
 public class BigPacket2 extends BigPacket {
 
-    /* ---------- immutable meta-data ---------- */
-    private final int originalSize = 10;
-    private final int colorId;
+    /* ===== immutable identity ===== */
+    private final int  originalSize = 10;
+    private final int  colorId;
 
-    /* ---------- constructor ---------- */
     public BigPacket2(int colorId) {
-        this.colorId   = colorId;
-        this.size      = originalSize;
-        this.type      = BIG;
+        this.colorId = colorId;
+        this.size    = originalSize;
+        this.type    = BIG;
 
-        this.speed        = 3f;   // feel free to tweak
+        this.speed        = 3f;
         this.acceleration = 0f;
     }
 
-    /* ---------- per-wire caches ---------- */
-    private List<Point> path;        // line poly-line
-    private List<Float> segLen;      // segment lengths
-    private int   segIdx  = 0;
-    private float sInSeg  = 0f;
+    /* ===== per-wire caches ===== */
+    private List<Point> path;      // smoothed polyline from the Line
+    private List<Float> segLen;    // lengths of each segment
+    private int   segIdx  = 0;     // current segment index
+    private float sInSeg  = 0f;    // arc-length traveled inside current segment
 
-    /* ---------- visual wiggle ---------- */
-    private static final float WIGGLE_AMPL = 3f;      // ± pixels
-    private static final float WIGGLE_FREQ = 6f;      // rad · s⁻¹   (≈ 1 Hz)
+    /* ===== wiggle ===== */
+    private static final float WIGGLE_AMPL = 3f;   // ± px
+    private static final float WIGGLE_FREQ = 6f;   // rad/s
     private float wigglePhase = 0f;
 
-    /* ========== API ========== */
-    public int getOriginalSize() { return originalSize; }
-    public int getColorId()      { return colorId; }
+    /* ===== upward "stairs" ===== */
+    private static final float STEP_INTERVAL = 50f; // travel distance between rises
+    private static final float RISE_STEP     = 4f;  // pixels to go up each step (screen y–)
+    private float totalS        = 0f;               // total distance traveled across segments
+    private float nextRiseAt    = STEP_INTERVAL;    // next threshold to trigger a rise
+    private float verticalOffset = 0f;              // accumulated upward offset (applied to y)
 
-    @Override public void wrongPort(Port p) { /* compatibility irrelevant */ }
+    /* ===== rendering helpers ===== */
+    private Point basePoint;                        // on-wire point before wiggle/offset
 
-    /* ========== per-frame update ========== */
+    /* ===== API ===== */
+    public int  getOriginalSize() { return originalSize; }
+    public int  getColorId()      { return colorId; }
+    @Override public void wrongPort(Port p) { /* irrelevant for big */ }
+
+    /* ================================================================ */
     @Override
     public void advance(float dt) {
         if (line == null) return;
         if (path == null) initialisePath();
 
-        /* 1 ▸ integrate arc-length ------------------------------------------------ */
+        // 1) Integrate along the wire
         float remaining = speed * dt;
         while (remaining > 0f && segIdx < segLen.size()) {
             float segRemain = segLen.get(segIdx) - sInSeg;
 
             if (remaining < segRemain) {
-                sInSeg += remaining;
-                remaining = 0f;
+                sInSeg    += remaining;
+                totalS    += remaining;
+                remaining  = 0f;
             } else {
+                sInSeg     = 0f;
+                totalS    += segRemain;
                 remaining -= segRemain;
-                segIdx++;  sInSeg = 0f;
+                segIdx++;
             }
-            updatePoint();           // on-wire point (before wiggle)
+            updateBasePoint();
+
+            // Apply periodic upward “stairs”
+            while (totalS >= nextRiseAt) {
+                verticalOffset -= RISE_STEP;     // up = negative screen Y
+                nextRiseAt     += STEP_INTERVAL;
+            }
         }
 
-        /* 2 ▸ apply visual sway --------------------------------------------------- */
+        // 2) Wiggle around the base point + apply global vertical offset
         wigglePhase += WIGGLE_FREQ * dt;
         applyWiggle();
 
-        /* 3 ▸ arrival check ------------------------------------------------------- */
+        // 3) Arrival at destination
         if (segIdx >= segLen.size()) {
+            // hand off to system; its receivePacket will clear the line & queue the packet
             isMoving = false;
             line.getEnd().getParentSystem().receivePacket(this);
         }
     }
 
-    /* ---------- helper: build path / tables once ---------- */
+    /* ===== helpers ===== */
     private void initialisePath() {
-        path   = line.getPath(6);
+        path   = line.getPath(6);                         // same smoothness as others
         segLen = new ArrayList<>(path.size() - 1);
         for (int i = 0; i < path.size() - 1; i++)
             segLen.add((float) path.get(i).distance(path.get(i + 1)));
 
-        segIdx = 0;
-        sInSeg = 0f;
-        point  = path.get(0);
-        isMoving = true;
+        segIdx = 0; sInSeg = 0f;
+        totalS = 0f; nextRiseAt = STEP_INTERVAL; verticalOffset = 0f;
+        wigglePhase = 0f;
+
+        basePoint = path.get(0);
+        point     = basePoint;
+        isMoving  = true;
     }
 
-    /* ---------- helper: update on-line point ---------- */
-    private void updatePoint() {
+    private void updateBasePoint() {
         if (segIdx >= segLen.size()) return;
-        point = lerp(
-                path.get(segIdx),
-                path.get(segIdx + 1),
-                sInSeg / segLen.get(segIdx));
+        float len = segLen.get(segIdx);
+        float t   = (len == 0f) ? 0f : (sInSeg / len);
+        basePoint = lerp(path.get(segIdx), path.get(segIdx + 1), t);
+        point     = basePoint; // will be adjusted by wiggle()
     }
-
-    /* ---------- helper: apply perpendicular wiggle ---------- */
     private void applyWiggle() {
-        if (segIdx >= segLen.size()) return;          // no active segment
+        if (segIdx >= segLen.size() || basePoint == null) return;
 
         Point a = path.get(segIdx);
         Point b = path.get(segIdx + 1);
 
         double dx = b.x - a.x, dy = b.y - a.y;
         double len = Math.hypot(dx, dy);
-        if (len == 0) return;
-        dx /= len;  dy /= len;                        // unit direction
+        if (len == 0) {
+            point = new Point(basePoint.x, (int) Math.round(basePoint.y + verticalOffset));
+            return;
+        }
+        dx /= len; dy /= len;
 
         // left-hand normal
         double nx = -dy, ny = dx;
 
-        double offset = WIGGLE_AMPL * Math.sin(wigglePhase);
+        double sway = WIGGLE_AMPL * Math.sin(wigglePhase);
         point = new Point(
-                (int) Math.round(point.x + nx * offset),
-                (int) Math.round(point.y + ny * offset));
+                (int) Math.round(basePoint.x + nx * sway),
+                (int) Math.round(basePoint.y + ny * sway + verticalOffset)
+        );
     }
 
-    /* ---------- clear caches when packet put onto a new line ---------- */
+    /* Clear caches when put onto a new line */
     @Override
     protected void resetPath() {
         path = null; segLen = null;
         segIdx = 0; sInSeg = 0f;
+
+        basePoint = null;
+
+        // reset decorations
         wigglePhase = 0f;
+        totalS = 0f; nextRiseAt = STEP_INTERVAL; verticalOffset = 0f;
     }
 
-    /* ---------- splitting logic used by DistributionSystem ---------- */
+    /* Splitting into bits (used by DistributionSystem / mergers) */
     public ArrayList<BitPacket> split() {
         ArrayList<BitPacket> list = new ArrayList<>();
         for (int i = 0; i < originalSize; i++)
             list.add(new BitPacket(this, i));
         return list;
+    }
+    @Override
+    public void resetCenterDrift() {
+        // snap to on-wire point (no wiggle/offset) and clear decorations
+        updateBasePoint();           // recompute basePoint from segIdx/sInSeg
+        verticalOffset = 0f;
+        wigglePhase    = 0f;
+        point          = basePoint;
     }
 }

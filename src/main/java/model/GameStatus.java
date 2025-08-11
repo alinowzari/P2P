@@ -75,15 +75,19 @@ public class GameStatus {
     }
 
     /** Adds coins to a level *and* to the global total. */
-    public void addCoinsToLevel(String levelName, int delta) {
-        if (delta <= 0) return;
-        coinsByLevel.merge(levelName, delta, Integer::sum);
-        totalCoinCount += delta;
+    public void addCoinsToLevel(String levelName, int coinsEarned) {
+        int previousCoins = coinsByLevel.get(levelName);
+        if(previousCoins < coinsEarned) {
+            coinsByLevel.put(levelName, coinsEarned);
+            totalCoinCount += (coinsEarned-previousCoins);
+        }
     }
 
     /** Attempts to spend from the global wallet. */
     public boolean trySpend(int price) {
-        if (price < 0 || totalCoinCount < price) return false;
+        if (price < 0 || totalCoinCount < price) {
+            return false;
+        }
         totalCoinCount -= price;
         return true;
     }
@@ -94,4 +98,6 @@ public class GameStatus {
         addCoinsToLevel(levelName, coinsEarned);
         save();
     }
+    public int getTotalCoin() { return totalCoinCount; }
+    public void setTotalCoin(int totalCoinCount) { this.totalCoinCount = totalCoinCount; }
 }

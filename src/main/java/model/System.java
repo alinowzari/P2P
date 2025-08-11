@@ -42,6 +42,7 @@ public abstract class System {
         // 3) optional destruction
         if (bigPacketCount == 3) {
             systemManager.removeSystem(this);
+            systemManager.removePacket(bigPacket);
         }
     }
 
@@ -85,6 +86,7 @@ public abstract class System {
         return null;
     }
     public Point getLocation() {return location;}
+    public void setLocation(Point p) { this.location = p; }
     public void addingCoin(Packet packet) {
         switch (packet) {
             case SquarePacket sp -> systemManager.addCoin(2);

@@ -117,12 +117,7 @@ public class TrianglePacket extends Packet implements MessengerTag {
     }
 
     /* ---------------------------------------------------------------- */
-    @Override public void advance(float dt) { moveForward(dt); }
-
-    private void moveForward(float dt) {
-
-        /* 0 ▸ ensure path exists */
-        if (path == null) initialisePath();
+    @Override public void advance(float dt) {if (path == null) initialisePath();
 
         /* 1 ▸ physics */
         speed  = Math.min(speed + acceleration * dt, maxSpeed);
@@ -147,6 +142,7 @@ public class TrianglePacket extends Packet implements MessengerTag {
             line.getEnd().getParentSystem().receivePacket(this);
         }
     }
+
 
     /* helpers -------------------------------------------------------- */
     private void initialisePath() {
