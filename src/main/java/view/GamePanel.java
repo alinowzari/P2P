@@ -70,59 +70,7 @@ public class GamePanel extends JPanel {
         hMid = hA = hB = null;
         repaint();
     }
-    /* =========================================================== */
 
-//    @Override protected void paintComponent(Graphics g) {
-//        super.paintComponent(g);
-//        // ── update our two labels ──────────────────────────────────────
-//        statusLabel.setText("Ready: " + model.isReady());
-//        coinLabel.setText("Coins: " + model.coinCount);
-//        //if crashed remove this line
-
-    /// /        repaint();
-//
-//        Graphics2D g2 = (Graphics2D) g;
-//        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-//                RenderingHints.VALUE_ANTIALIAS_ON);
-//
-//        /* 1 ▸ draw wires */
-//        if (model.allLines != null)
-//            for (Line l : model.allLines) {
-//                g2.setStroke(new BasicStroke(2));
-//                g2.setColor(Color.BLACK);
-//                List<Point> pts = l.getPath(6);
-//                for (int i = 0; i < pts.size() - 1; i++) {
-//                    Point a = pts.get(i), b = pts.get(i + 1);
-//                    g2.drawLine(a.x, a.y, b.x, b.y);
-//                }
-//            }
-//
-//        /* 2 ▸ dashed preview */
-//        if (previewA != null && previewB != null) {
-//            g2.setColor(new Color(0, 0, 0, 128));
-//            g2.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
-//                    0, new float[]{6, 6}, 0));
-//            g2.drawLine(previewA.x, previewA.y, previewB.x, previewB.y);
-//        }
-//
-//        /* 3 ▸ systems & ports */
-//        for (var sys : model.getAllSystems()) {
-//            drawSystem(g2, sys);
-//        }
-//        for (var pkt : model.allPackets) {       // or model.getAllPackets()
-//            drawPacket(g2, pkt);
-//        }
-//        /* 2b ▸ draw bend handles */
-//        if (hMid != null) {
-//            g2.setColor(Color.YELLOW);
-//            g2.fillOval(hMid.x-4, hMid.y-4, 8, 8);
-//        }
-//        if (hA != null && hB != null) {
-//            g2.setColor(Color.RED);
-//            g2.fillOval(hA.x-3, hA.y-3, 6, 6);
-//            g2.fillOval(hB.x-3, hB.y-3, 6, 6);
-//        }
-//    }
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

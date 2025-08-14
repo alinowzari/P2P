@@ -26,7 +26,7 @@ public class DestroyerSystem extends System {
         if(packet instanceof BigPacket big){
             handleBigPacketArrival(big);
         }
-        packet.shrink();
+        packet.incNoise();
         if(packet.getSize()<=0){
             systemManager.removePacket(packet);
             return;

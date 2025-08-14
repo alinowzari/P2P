@@ -268,4 +268,12 @@ public class Line {
         t = Math.max(0, Math.min(1, t));
         return new Point((int)Math.round(a.x + t*dx), (int)Math.round(a.y + t*dy));
     }
+    //new line
+    public double distanceToPath(Point p) {
+        List<Point> pts = getPath(0);
+        double best = Double.POSITIVE_INFINITY;
+        for (int i = 0; i < pts.size()-1; i++)
+            best = Math.min(best, ptToSegmentDist(p, pts.get(i), pts.get(i+1)));
+        return best;
+    }
 }

@@ -1,6 +1,7 @@
 package model;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 public abstract class Packet {
     public static float SPEED_SCALE = 12f;   ;
@@ -11,7 +12,13 @@ public abstract class Packet {
     protected  Line line;
     protected Type type;
     protected int size;
-    protected int noise;
+    //impact related
+    protected int framesOnWire = 0;
+    protected int noise;// screen-space approx (match drawing)
+    protected float impactVX = 0f, impactVY = 0f;   // px/s lateral kick
+    protected float impactDX = 0f, impactDY = 0f;
+    protected static final float IMPACT_DRAG = 4.0f;// accumulated lateral offset;
+    //
     protected float progress=0.1f;
     protected float speed;
     protected float acceleration;
@@ -38,13 +45,6 @@ public abstract class Packet {
     public void isTrojan(){trojan=true;}
     public void isNotTrojan(){trojan=false;}
     public boolean hasTrojan() {return trojan;}
-
-
-    public void shrink() {
-        if (size > noise) {
-            size++;
-        }
-    }
     public abstract void wrongPort(Port port);
 
 //    public void advance(float dt) {
@@ -169,4 +169,116 @@ public abstract class Packet {
     }
 
     public boolean isAccelerationSuppressed() { return accelSuppressedUntil != 0; }
+    public int     getNoise() { return noise; }
+    public void incNoise() {
+        if (noise < size) {
+            noise++;
+            return;
+        }
+        // noise reached size → destroy this packet
+        SystemManager mgr = resolveManager();
+        if (mgr != null) {
+            mgr.packetDestroyed(this);
+        } else {
+            // last-resort fallback: detach safely to avoid leaked state
+            if (line != null) {
+                line.removeMovingPacket();
+                setLine(null);
+            }
+            isMoving = false;
+            // (Optionally log) System.err.println("Packet destroyed but manager was null (id=" + id + ")");
+        }
+    }
+
+    /** Find a SystemManager even when `system == null` while travelling on a line. */
+    private SystemManager resolveManager() {
+        if (system != null) {
+            return system.getSystemManager();  // if your System exposes this
+        }
+        if (line != null) {
+            // prefer start; if missing, try end
+            model.System startSys = (line.getStart() != null) ? line.getStart().getParentSystem() : null;
+            if (startSys != null && startSys.getSystemManager() != null) {
+                return startSys.getSystemManager();
+            }
+            model.System endSys = (line.getEnd() != null) ? line.getEnd().getParentSystem() : null;
+            if (endSys != null) {
+                return endSys.getSystemManager();
+            }
+        }
+        return null;
+    }
+    public List<Point> hitMapLocal() {
+        int r = collisionRadius();
+        ArrayList<Point> pts = new ArrayList<>(8);
+        for (int i = 0; i < 8; i++) {
+            double a = i * Math.PI / 4.0; // 0,45,90,...
+            pts.add(new Point((int)Math.round(r * Math.cos(a)),
+                    (int)Math.round(r * Math.sin(a))));
+        }
+        return pts;
+    }
+
+    /** Translate local hit points by current screen center. */
+    public List<Point> hitMapWorld() {
+        Point c = getScreenPosition();
+        ArrayList<Point> out = new ArrayList<>();
+        for (Point p : hitMapLocal()) out.add(new Point(c.x + p.x, c.y + p.y));
+        return out;
+    }
+    public int collisionRadius() {
+        // default matches your on-screen packet radius (PACKET_R = 8)
+        return 8;
+    }
+    public void applyImpactImpulse(Point impact, float strength) {
+        if (impact == null || this.point == null) return;
+
+        float dx = this.point.x - impact.x;
+        float dy = this.point.y - impact.y;
+        float len = (float) Math.hypot(dx, dy);
+        if (len < 1e-3f) { dx = 1f; dy = 0f; len = 1f; }
+
+        dx /= len; dy /= len;                // unit vector away from impact
+
+        final float KICK = 60f;              // px/s; tune to taste
+        impactVX += dx * KICK * strength;
+        impactVY += dy * KICK * strength;
+    }
+
+    /**
+     * Combine the on-wire geometric center (base) with the transient impact
+     * offset/velocity, with exponential damping. Returns the visible point.
+     */
+    protected Point composeImpact(Point base, float dt) {
+        if (base == null) return this.point;
+
+        // integrate lateral velocity → offset
+        impactDX += impactVX * dt;
+        impactDY += impactVY * dt;
+
+        // clamp offset so packets can’t fly off too far
+        float maxOffset = Math.max(24f, 2f * collisionRadius());
+        float offLen = (float) Math.hypot(impactDX, impactDY);
+        if (offLen > maxOffset) {
+            float k = maxOffset / offLen;
+            impactDX *= k; impactDY *= k;
+        }
+
+        // exponential damping of lateral velocity
+        float decay = (float) Math.exp(-IMPACT_DRAG * dt);
+        impactVX *= decay;
+        impactVY *= decay;
+
+        return new Point(
+                Math.round(base.x + impactDX),
+                Math.round(base.y + impactDY)
+        );
+    }
+    public void immediateImpactStep(float dt) {
+        if (point != null) {
+            // use current visible center as base for one tiny integration step
+            this.point = composeImpact(this.point, dt);
+        }
+    }
+
 }
