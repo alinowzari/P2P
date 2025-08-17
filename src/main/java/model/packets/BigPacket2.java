@@ -34,7 +34,7 @@ public class BigPacket2 extends BigPacket {
     private static final float RISE_STEP     = 4f;
     private float totalS = 0f, nextRiseAt = STEP_INTERVAL, verticalOffset = 0f;
 
-    private Point basePoint;
+
 
     public BigPacket2(int colorId) {
         this.colorId = colorId;

@@ -3,10 +3,12 @@
   "levels" : [ {
     "levelName" : "Level 1",
     "coins" : 55,
+    "wireLength" : 12322,
     "passed" : true
   }, {
     "levelName" : "Level 2",
     "coins" : 0,
+    "wireLength" : 205,
     "passed" : false
   } ]
 }

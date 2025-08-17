@@ -23,7 +23,7 @@ public class BigPacket1 extends BigPacket {
     private int   segIdx = 0;
     private float sInSeg = 0f;
 
-    private Point basePoint;
+
 
     public BigPacket1(int colorId) {
         this.colorId = colorId;

@@ -23,7 +23,7 @@ public final class SecretPacket2<P extends Packet & MessengerTag> extends Packet
     private float sInSeg  = 0f;
     private int   dir     = +1;
 
-    private Point basePoint;
+
 
     public SecretPacket2(ProtectedPacket<P> inner) {
         this.inner = inner;

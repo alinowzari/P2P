@@ -24,7 +24,7 @@ public class BitPacket extends Packet implements MessengerTag {
     private final float maxSpeed = 5f;
 
     /* base center */
-    private Point basePoint;
+
 
     public BitPacket(BigPacket2 parent, int index) {
         this.parentId     = parent.getId();

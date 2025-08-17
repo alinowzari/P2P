@@ -97,6 +97,7 @@ public class Line {
         BendPoint bp = new BendPoint(footA, middle, footB);
         bendPoints.add(bp);
         bendPoints.sort(Comparator.comparingDouble(bpp -> projectionT(bpp.getMiddle())));
+        invalidateLengthCache();
         return bp;
     }
     public void removeBendPoint(BendPoint bendPoint) {bendPoints.remove(bendPoint);}
@@ -276,4 +277,99 @@ public class Line {
             best = Math.min(best, ptToSegmentDist(p, pts.get(i), pts.get(i+1)));
         return best;
     }
+    // --- LENGTH HELPERS (put in Line) ---
+
+    /** Current polyline length in whole pixels (straight segments + bends). */
+    public int lengthPx() {
+        return lengthFromPts(getPath(6));
+    }
+
+    /** If START endpoint were shifted by (dx,dy), what would the length be? */
+    public int lengthIfShiftStartBy(int dx, int dy) {
+        java.util.List<Point> pts = new java.util.ArrayList<>(getPath(6));
+        if (pts.isEmpty()) return 0;
+        Point p0 = pts.get(0);
+        pts.set(0, new Point(p0.x + dx, p0.y + dy));
+        return lengthFromPts(pts);
+    }
+
+    /** If END endpoint were shifted by (dx,dy), what would the length be? */
+    public int lengthIfShiftEndBy(int dx, int dy) {
+        java.util.List<Point> pts = new java.util.ArrayList<>(getPath(6));
+        if (pts.isEmpty()) return 0;
+        int last = pts.size() - 1;
+        Point pn = pts.get(last);
+        pts.set(last, new Point(pn.x + dx, pn.y + dy));
+        return lengthFromPts(pts);
+    }
+
+    /** Utility for new-wire preview without constructing a Line. */
+    public static int straightLength(Point a, Point b) {
+        return (int)Math.round(a.distance(b));
+    }
+
+    /** If you edit bends (drag), call this to keep other caches sane. */
+    public void invalidateLengthCache() {
+        this.totalLenCache = -1; // keeps your existing distanceAlong cache correct
+    }
+
+    /* --- private --- */
+    private static int lengthFromPts(List<Point> pts) {
+        if (pts == null || pts.size() < 2) return 0;
+        double s = 0;
+        for (int i = 0; i < pts.size() - 1; i++) s += pts.get(i).distance(pts.get(i + 1));
+        return (int)Math.round(s);
+    }
+    /** More robust: measures straight segments + each bend as a sampled quadratic Bézier. */
+    public int lengthPxAccurate() { return lengthPxAccurate(6); } // use same smoothness you render with
+
+    public int lengthPxAccurate(int samples) {
+        // safety
+        if (samples < 1) samples = 1;
+
+        // Order bends along the line
+        java.util.ArrayList<BendPoint> ordered = new java.util.ArrayList<>(bendPoints);
+        ordered.sort((b1, b2) -> Double.compare(projectionT(b1.getMiddle()), projectionT(b2.getMiddle())));
+
+        double sum = 0.0;
+        Point current = start.getCenter();
+
+        for (BendPoint bp : ordered) {
+            // straight up to bend start
+            if (!current.equals(bp.getStart())) sum += current.distance(bp.getStart());
+
+            // quadratic Bézier arc from start -> middle -> end
+            sum += quadBezierLen(bp.getStart(), bp.getMiddle(), bp.getEnd(), samples);
+
+            current = bp.getEnd();
+        }
+
+        // final straight to input
+        if (!current.equals(end.getCenter())) sum += current.distance(end.getCenter());
+
+        return (int) Math.round(sum);
+    }
+
+    /** Quadratic Bézier length via uniform sampling (good enough and consistent with rendering). */
+    private static double quadBezierLen(Point p0, Point p1, Point p2, int samples) {
+        double prevX = p0.x, prevY = p0.y;
+        double len = 0.0;
+
+        for (int i = 1; i <= samples; i++) {
+            double t = (double) i / samples;
+            double omt = 1.0 - t;
+
+            // B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
+            double x = omt*omt*p0.x + 2*omt*t*p1.x + t*t*p2.x;
+            double y = omt*omt*p0.y + 2*omt*t*p1.y + t*t*p2.y;
+
+            double dx = x - prevX;
+            double dy = y - prevY;
+            len += Math.hypot(dx, dy);
+
+            prevX = x; prevY = y;
+        }
+        return len;
+    }
+
 }

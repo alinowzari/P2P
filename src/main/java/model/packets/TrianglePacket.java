@@ -18,7 +18,7 @@ public class TrianglePacket extends Packet implements MessengerTag {
     private final float maxSpeed = 7f;
 
     /* on-wire geometric center */
-    private Point basePoint;
+
 
     public TrianglePacket() {
         size  = 3;

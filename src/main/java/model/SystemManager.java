@@ -21,19 +21,16 @@ public class SystemManager {
     private static final int EFFECT_RADIUS_PX = 10;
     private final Map<Integer, Integer> offwireFrames = new HashMap<>();
     private static final int   OFFWIRE_GRACE_FRAMES = 4;   // require N consecutive frames off-wire
-    private static final float OFFWIRE_FACTOR       = 1.6f; // soften threshold: > 1.6*radius to count as “off”
+    private static final float OFFWIRE_FACTOR       = 1.2f; // soften threshold: > 1.6*radius to count as “off”
     private static final int   PORT_SAFE_PX         = 18;
-    private Set<Long> activeContacts = new HashSet<>();
     private static final int CELL = 32;
-
-    // cell hash map: key packs (cx, cy) into a long
     private final Map<Long, ArrayList<Packet>> grid = new HashMap<>();
-    //
     private static final long NANO_20S = 20_000_000_000L;
     ArrayList<System> systems;
     ArrayList<SpySystem> spySystems;
     ArrayList<VpnSystem> vpnSystems;
-    private final Random rng = new Random();
+    private final float maxLineLength;
+    private float usedLineLength=0;
     private final Set<Integer> packetIds = new HashSet<>();
     public ArrayList<Packet> allPackets;
     private static final int SAFE_RADIUS = 35;
@@ -49,7 +46,7 @@ public class SystemManager {
     public static GameStatus gameStatus;
     private String levelName;          // NEW
     private boolean winCommitted = false;
-    public SystemManager(GameStatus gameStatus) {
+    public SystemManager(GameStatus gameStatus,  String levelName) {
         systems = new ArrayList<>();
         spySystems = new ArrayList<>();
         vpnSystems = new ArrayList<>();
@@ -58,6 +55,8 @@ public class SystemManager {
         bigPackets = new HashMap<>();
         this.gameStatus = gameStatus;
         isLevelPassed = false;
+        this.levelName = levelName;
+        maxLineLength = gameStatus.getWireLength(levelName);
         winCommitted = gameStatus.isLevelPassed(levelName);
     }
     public void addSystem(System system) {
@@ -159,8 +158,15 @@ public class SystemManager {
     public HashMap<Integer, ArrayList<BitPacket>> getBigPackets() {
         return bigPackets;
     }
-    public void addLine(Line line) {allLines.add(line);}
-    public void removeLine(Line line) {allLines.remove(line);}
+    public void addLine(Line line) {
+        allLines.add(line);
+        usedLineLength += line.lengthPx();
+    }
+    public void removeLine(Line line) {
+        usedLineLength -= line.lengthPx();
+        if (usedLineLength < 0) usedLineLength = 0;
+        allLines.remove(line);
+    }
     public boolean isReady() {return isReady;}
     public boolean isLaunched() {return launched;}
     public void launchPackets() { launched = true; }
@@ -231,71 +237,14 @@ public class SystemManager {
         else if(!isLevelPassed && allPackets.isEmpty()){
             java.lang.System.out.println("you lose");
         }
-        //
     }
-//    public void checkCollisions() {
-//        // 0) snapshot + filter to travelling packets that have a screen position
-//        final ArrayList<Packet> list = new ArrayList<>(allPackets);
-//        final ArrayList<Packet> moving = new ArrayList<>(list.size());
-//        for (Packet p : list) {
-//            if (p != null && p.isMoving && p.getLine() != null && p.getScreenPosition() != null) {
-//                moving.add(p);
-//            }
-//        }
-//        if (moving.size() < 2) return;
-//
-//        // 1) pairwise polygon-vs-polygon intersection
-//        for (int i = 0; i < moving.size(); i++) {
-//            Packet a = moving.get(i);
-//            List<Point> polyA = worldHitMap(a);
-//            if (polyA.size() < 2) continue;
-//
-//            for (int j = i + 1; j < moving.size(); j++) {
-//                Packet b = moving.get(j);
-//                List<Point> polyB = worldHitMap(b);
-//                if (polyB.size() < 2) continue;
-//
-//                // 1a) edge vs edge test
-//                boolean hit = polygonsIntersect(polyA, polyB);
-//
-//                // 1b) (fallback) containment test: a vertex inside the other polygon
-//                if (!hit) {
-//                    Point a0 = polyA.get(0);
-//                    Point b0 = polyB.get(0);
-//                    hit = pointInPolygon(a0, polyB) || pointInPolygon(b0, polyA);
-//                }
-//
-//                if (hit) {
-//                    // --- pick an impact point (prefer the first real segment intersection) ---
-//                    Point impact = firstIntersectionPoint(polyA, polyB);
-//                    if (impact == null) {
-//                        // fallback = midpoint between centers
-//                        Point ca = a.getScreenPosition();
-//                        Point cb = b.getScreenPosition();
-//                        impact = new Point((ca.x + cb.x) / 2, (ca.y + cb.y) / 2);
-//                    }
-//
-//                    // --- add noise (your Packet.incNoise() already self-destroys if >= size) ---
-//                    a.incNoise();
-//                    b.incNoise();
-//
-//                    // --- shove both away from the impact (adds lateral velocity) ---
-//                    a.applyImpactImpulse(impact, 1f);
-//                    b.applyImpactImpulse(impact, 1f);
-//
-//                    // --- make the shove visible immediately this frame too ---
-//                    a.immediateImpactStep(DT);
-//                    b.immediateImpactStep(DT);
-//                }
-//            }
-//        }
-//    }
 public void checkCollisions() {
     final ArrayList<Packet> list = new ArrayList<>(allPackets);
     final ArrayList<Packet> moving = new ArrayList<>(list.size());
     for (Packet p : list) {
         if (p != null && p.isMoving && p.getLine() != null && p.getScreenPosition() != null) moving.add(p);
     }
+    cullOffWire(moving);
     if (moving.size() < 2) return;
 
     rebuildGrid(moving);
@@ -346,6 +295,19 @@ public void checkCollisions() {
                     // 3) tiny immediate step so they visibly separate this frame
                     a.immediateImpactStep(1f/60f);
                     b.immediateImpactStep(1f/60f);
+                    // new code for new center
+                    double nx = ca.x - cb.x, ny = ca.y - cb.y;
+                    double len = Math.hypot(nx, ny);
+                    if (len < 1e-3) { nx = 1; ny = 0; len = 1; }
+                    nx /= len; ny /= len;
+
+                    final double SHIFT = 2.0;  // px — tweak to taste
+                    Point pa = a.getPoint();
+                    Point pb = b.getPoint();
+                    if (pa != null) a.setPoint(new Point((int)Math.round(pa.x + nx*SHIFT),
+                            (int)Math.round(pa.y + ny*SHIFT)));
+                    if (pb != null) b.setPoint(new Point((int)Math.round(pb.x - nx*SHIFT),
+                            (int)Math.round(pb.y - ny*SHIFT)));
                 }
             }
         }
@@ -586,5 +548,82 @@ public void checkCollisions() {
     }
     private static long key(int cx, int cy) {
         return (((long) cx) << 32) ^ (cy & 0xffffffffL);
+    }
+    private void cullOffWire(List<Packet> moving) {
+        for (Packet p : moving) {
+            Line l = p.getLine();
+            Point c = p.getScreenPosition();
+            if (l == null || c == null) continue;
+
+            int id = p.getId();
+
+            // 0) Never cull right at the ports (avoids false positives at entry/exit)
+            if (nearPort(l, c, PORT_SAFE_PX)) {
+                offwireFrames.remove(id);   // reset if we were counting
+                continue;
+            }
+
+            // 1) Distance from current visible center to the *polyline* of the wire
+            double dist = distanceToPolyline(l, c);
+
+            // 2) Per-packet radius threshold
+            int baseR = Math.max(6, p.collisionRadius()); // safety floor
+            float threshold = OFFWIRE_FACTOR * baseR;
+
+            // 3) Count consecutive frames off-wire; delete after grace
+            if (dist > threshold) {
+                int n = offwireFrames.getOrDefault(id, 0) + 1;
+                if (n >= OFFWIRE_GRACE_FRAMES) {
+                    packetDestroyed(p);
+                    offwireFrames.remove(id);
+                } else {
+                    offwireFrames.put(id, n);
+                }
+            } else {
+                offwireFrames.remove(id); // back on-wire → reset
+            }
+        }
+    }
+
+    private static boolean nearPort(Line l, Point c, int safePx) {
+        Point s = l.getStart().getCenter();
+        Point e = l.getEnd().getCenter();
+        return (s != null && c.distance(s) <= safePx) || (e != null && c.distance(e) <= safePx);
+    }
+    private double distanceToPolyline(Line l, Point p) {
+        List<Point> pts = l.getPath(6);            // same smoothness you use elsewhere
+        if (pts == null || pts.size() < 2) return Double.POSITIVE_INFINITY;
+        double best = Double.POSITIVE_INFINITY;
+        for (int i = 0; i < pts.size() - 1; i++) {
+            double d = segmentDistance(p, pts.get(i), pts.get(i + 1));
+            if (d < best) best = d;
+        }
+        return best;
+    }
+    public float getWireBudgetPx()        { return maxLineLength; }
+    public int   getWireUsedPx()          { return (int)usedLineLength; }
+    public boolean canAffordDelta(int deltaPx) {
+        return usedLineLength + deltaPx <= maxLineLength + 0.5f;
+    }
+    public void applyWireDelta(int deltaPx) {
+        usedLineLength += deltaPx;
+        if (usedLineLength < 0) usedLineLength = 0;
+    }
+    public void recomputeUsedWireLength() {
+        int sum = 0;
+        for (Line l : allLines) sum += l.lengthPx();
+        usedLineLength = sum;
+    }
+    public boolean canCreateWire(OutputPort a, InputPort b) {
+        int need = Line.straightLength(a.getCenter(), b.getCenter());
+        return canAffordDelta(need);
+    }
+    public boolean tryCommitLineGeometryChange(Line line, int oldLen, int newLen) {
+        float base = usedLineLength - oldLen;           // remove the old contribution
+        if (base + newLen > maxLineLength + 0.5f) {     // would overflow?
+            return false;
+        }
+        usedLineLength = base + newLen;                 // accept
+        return true;
     }
 }

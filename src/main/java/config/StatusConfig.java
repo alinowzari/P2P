@@ -9,5 +9,5 @@ public record StatusConfig(
         List<LevelStatus> levels
 )
 {
-    public record LevelStatus(String levelName, int coins, boolean passed) {}
+    public record LevelStatus(String levelName, int coins, float wireLength, boolean passed) {}
 }

@@ -17,7 +17,7 @@ public class InfinityPacket extends Packet implements MessengerTag {
     private float sInSeg  = 0f;
     private final float maxSpeed = 5f;
 
-    private Point basePoint;
+
 
     public InfinityPacket() {
         size         = 1;

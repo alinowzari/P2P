@@ -19,7 +19,7 @@ public class SecretPacket1 extends Packet {
     private int   segIdx = 0;
     private float sInSeg = 0f;
 
-    private Point basePoint;
+
 
     public SecretPacket1() {
         size  = 4;

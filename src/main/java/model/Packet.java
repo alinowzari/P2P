@@ -17,7 +17,7 @@ public abstract class Packet {
     protected int noise;// screen-space approx (match drawing)
     protected float impactVX = 0f, impactVY = 0f;   // px/s lateral kick
     protected float impactDX = 0f, impactDY = 0f;
-    protected static final float IMPACT_DRAG = 4.0f;// accumulated lateral offset;
+    protected static final float IMPACT_DRAG = 8.0f;// accumulated lateral offset;
     //
     protected float progress=0.1f;
     protected float speed;
@@ -28,6 +28,8 @@ public abstract class Packet {
     protected boolean isMoving;
     protected boolean trojan;
     private boolean doneMovement;
+
+    protected Point basePoint;
     public Packet() {
         system=null;
         line=null;
@@ -167,8 +169,6 @@ public abstract class Packet {
             accelSuppressedUntil = 0;
         }
     }
-
-    public boolean isAccelerationSuppressed() { return accelSuppressedUntil != 0; }
     public int     getNoise() { return noise; }
     public void incNoise() {
         if (noise < size) {
@@ -218,14 +218,6 @@ public abstract class Packet {
         }
         return pts;
     }
-
-    /** Translate local hit points by current screen center. */
-    public List<Point> hitMapWorld() {
-        Point c = getScreenPosition();
-        ArrayList<Point> out = new ArrayList<>();
-        for (Point p : hitMapLocal()) out.add(new Point(c.x + p.x, c.y + p.y));
-        return out;
-    }
     public int collisionRadius() {
         // default matches your on-screen packet radius (PACKET_R = 8)
         return 8;
@@ -238,17 +230,19 @@ public abstract class Packet {
         float len = (float) Math.hypot(dx, dy);
         if (len < 1e-3f) { dx = 1f; dy = 0f; len = 1f; }
 
-        dx /= len; dy /= len;                // unit vector away from impact
+        dx /= len; dy /= len;
 
-        final float KICK = 60f;              // px/s; tune to taste
+        // was 60f – much softer kick; still visible with the immediate step
+        final float KICK = 18f;
         impactVX += dx * KICK * strength;
         impactVY += dy * KICK * strength;
     }
 
-    /**
-     * Combine the on-wire geometric center (base) with the transient impact
-     * offset/velocity, with exponential damping. Returns the visible point.
-     */
+    /** Max visual drift from the on-wire base. Keep it small. */
+    public float maxImpactOffset() {
+        // e.g. radius 8 → clamp ≈ 10 px (instead of 24 px before)
+        return Math.min(10f, 1.25f * collisionRadius());
+    }
     protected Point composeImpact(Point base, float dt) {
         if (base == null) return this.point;
 
@@ -256,15 +250,15 @@ public abstract class Packet {
         impactDX += impactVX * dt;
         impactDY += impactVY * dt;
 
-        // clamp offset so packets can’t fly off too far
-        float maxOffset = Math.max(24f, 2f * collisionRadius());
+        // ⬅️ use the hook instead of hard-coded number
+        float maxOffset = maxImpactOffset();
         float offLen = (float) Math.hypot(impactDX, impactDY);
         if (offLen > maxOffset) {
             float k = maxOffset / offLen;
             impactDX *= k; impactDY *= k;
         }
 
-        // exponential damping of lateral velocity
+        // exponential damping
         float decay = (float) Math.exp(-IMPACT_DRAG * dt);
         impactVX *= decay;
         impactVY *= decay;
@@ -274,11 +268,11 @@ public abstract class Packet {
                 Math.round(base.y + impactDY)
         );
     }
+
     public void immediateImpactStep(float dt) {
         if (point != null) {
             // use current visible center as base for one tiny integration step
             this.point = composeImpact(this.point, dt);
         }
     }
-
 }

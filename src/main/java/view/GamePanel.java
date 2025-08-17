@@ -74,7 +74,9 @@ public class GamePanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-
+        List<model.System> systems = new java.util.ArrayList<>(model.getAllSystems());
+        List<Line> lines   = new java.util.ArrayList<>(model.allLines);
+        List<Packet> packets = new java.util.ArrayList<>(model.allPackets);
         statusLabel.setText("Ready: " + model.isReady());
         coinLabel.setText("Coins: " + model.coinCount);
         String totalTxt = "Total: " + model.getTotalCoins();
@@ -84,9 +86,35 @@ public class GamePanel extends JPanel {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
+        int usedPx = model.getWireUsedPx();
+        int capPx  = (int) model.getWireBudgetPx();
 
+        String usedTxt = "Used: " + usedPx + " px";
+        String capTxt  = "Max:  " + capPx  + " px";
+
+        FontMetrics fmHUD = g2.getFontMetrics();
+        int boxW = Math.max(fmHUD.stringWidth(usedTxt), fmHUD.stringWidth(capTxt)) + 16;
+        int boxH = 18;
+        int rightX = getWidth() - boxW - 10;
+        int usedY  = 34;      // under the labels
+        int capY   = usedY + boxH + 6;
+
+// color-code the "Used" box vs budget
+        Color usedBg;
+        if (capPx <= 0) {
+            usedBg = new Color(128,128,128,200);
+        } else {
+            double ratio = usedPx / (double) capPx;
+            if (ratio <= 0.90)      usedBg = new Color(120,200,120,200);   // OK
+            else if (ratio <= 1.00) usedBg = new Color(255,183,77,200);    // near limit
+            else                    usedBg = new Color(229,115,115,220);   // over limit
+        }
+        Color capBg = new Color(45, 45, 45, 210);
+
+        drawBadge(g2, rightX, usedY, boxW, boxH, usedTxt, usedBg);
+        drawBadge(g2, rightX, capY,  boxW, boxH, capTxt,  capBg);
         /* 1 ▸ systems & ports FIRST (background) */
-        for (var sys : model.getAllSystems()) {
+        for (var sys : systems) {
             drawSystem(g2, sys);
         }
 
@@ -94,7 +122,7 @@ public class GamePanel extends JPanel {
         if (model.allLines != null) {
             g2.setStroke(new BasicStroke(2));
             g2.setColor(Color.BLACK);
-            for (Line l : model.allLines) {
+            for (Line l : lines) {
                 List<Point> pts = l.getPath(6);
                 for (int i = 0; i < pts.size() - 1; i++) {
                     Point a = pts.get(i), b = pts.get(i + 1);
@@ -113,7 +141,7 @@ public class GamePanel extends JPanel {
         }
 
         /* 4 ▸ travelling packets – always foremost */
-        for (var pkt : model.allPackets) {
+        for (var pkt : packets) {
             drawPacket(g2, pkt);
         }
 
@@ -252,74 +280,13 @@ public class GamePanel extends JPanel {
             drawShape(g2, p.getType(), cx, cy);
         }
     }
-
-//    private void drawQueuedPackets(Graphics2D g2, model.System sys, int startX, int baseY) {
-//
-//        int gap = 8;                  // horizontal spacing between icons
-//        int size = 6;                  // radius / half-side of mini icon
-//        int x = startX;
-//
-//        for (Packet p : sys.getPackets()) {
-//            switch (p) {
-//                case SquarePacket sq -> {
-//                    g2.setColor(Color.BLUE);
-//                    g2.fillRect(x - size, baseY - size, 2 * size, 2 * size);
-//                }
-//                case TrianglePacket tr -> {
-//                    g2.setColor(Color.ORANGE);
-//                    int[] xs = {x, x - size, x + size};
-//                    int[] ys = {baseY - size, baseY + size, baseY + size};
-//                    g2.fillPolygon(xs, ys, 3);
-//                }
-//                case InfinityPacket inf -> {
-//                    g2.setColor(Color.MAGENTA);
-//                    g2.drawOval(x - 2 * size, baseY - size, 2 * size, 2 * size);
-//                    g2.drawOval(x, baseY - size, 2 * size, 2 * size);
-//                }
-//                case BigPacket big ->
-//                    // ring of dots
-//                        drawCircleCluster(
-//                                g2, x, baseY,
-//                                big.getSize(),      // number of dots
-//                                2 * size,           // cluster radius
-//                                colorForId(big.getColorId())
-//                        );
-//
-//                case BitPacket bit ->
-//                    // small annotated circle
-//                        drawCircle(
-//                                g2, x, baseY,
-//                                size,
-//                                colorForId(bit.getColorId()),
-//                                String.valueOf(bit.getFragmentIdx())
-//                        );
-//
-//                case ProtectedPacket<?> prot ->
-//                    // tiny shield
-//                        drawShield(g2, x, baseY, size);
-//
-//                case SecretPacket1 s1 ->
-//                    // tiny hexagon
-//                        drawHexagon(g2, x, baseY, size, new Color(0xFF9800));
-//
-//                case SecretPacket2<?> s2 ->
-//                    // tiny padlock
-//                        drawPadlock(g2, x, baseY, size, new Color(0x3F51B5));
-//
-//                default -> {
-//                    g2.setColor(Color.GRAY);
-//                    g2.fillOval(x - size, baseY - size, 2*size, 2*size);
-//                }
-//            }
-//            x += 2 * size + gap;
-//        }
-//    }
 private void drawQueuedPackets(Graphics2D g2, model.System sys, int startX, int baseY) {
+    List<Packet> queue = new java.util.ArrayList<>(sys.getPackets());
     int gap  = 8;   // horizontal spacing
     int size = 6;   // mini‐icon “radius”
     int x    = startX;
 
-    for (Packet p : sys.getPackets()) {
+    for (Packet p : queue) {
         if (p instanceof InfinityPacket) {
             g2.setColor(Color.MAGENTA);
             g2.drawOval(x - 2*size, baseY - size, 2*size, 2*size);
@@ -501,5 +468,25 @@ private void drawQueuedPackets(Graphics2D g2, model.System sys, int startX, int 
         g2.setColor(Color.WHITE);
         Arc2D.Double arc = new Arc2D.Double(cx - shackleR, bodyY - shackleR/2.0, 2*shackleR, shackleR, 0, 180, Arc2D.OPEN);
         g2.draw(arc);
+    }
+    private static void drawBadge(Graphics2D g2, int x, int y, int w, int h, String text, Color bg) {
+        Color oldC = g2.getColor();
+        Stroke oldS = g2.getStroke();
+
+        g2.setColor(bg);
+        g2.fillRoundRect(x, y, w, h, 10, 10);
+
+        g2.setColor(new Color(0,0,0,40));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(x, y, w, h, 10, 10);
+
+        g2.setColor(Color.WHITE);
+        FontMetrics fm = g2.getFontMetrics();
+        int tx = x + 8;
+        int ty = y + (h + fm.getAscent() - fm.getDescent()) / 2 - 1;
+        g2.drawString(text, tx, ty);
+
+        g2.setColor(oldC);
+        g2.setStroke(oldS);
     }
 }

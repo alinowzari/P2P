@@ -16,7 +16,7 @@ public class SquarePacket extends Packet implements MessengerTag {
     private int   segIdx = 0;
     private float sInSeg = 0f;
 
-    private Point basePoint;
+
 
     public SquarePacket() {
         size  = 2;

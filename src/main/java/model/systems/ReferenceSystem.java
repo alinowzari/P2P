@@ -2,6 +2,7 @@ package model.systems;
 import model.Line;
 import model.Packet;
 import model.SystemManager;
+import model.packets.BitPacket;
 import model.packets.ProtectedPacket;
 import model.packets.SecretPacket1;
 import model.packets.SecretPacket2;
@@ -17,8 +18,9 @@ public class ReferenceSystem extends System {
         super(location, inputPorts, outputPorts, systemManager, id);
     }
     public void receivePacket(Packet packet) {
-        //new line remove if fucked up
-        systemManager.addToReceivedPacket();
+        if(!(packet instanceof BitPacket)) {
+            systemManager.addToReceivedPacket();
+        }
         systemManager.removePacket(packet);
         packet.getLine().removeMovingPacket();
         packet.setLine(null);

@@ -32,8 +32,7 @@ public class LevelsManager {
 
         // Build a SystemManager for each level
         for (GameConfig cfg : configs) {
-            SystemManager sm = new SystemManager(gameStatus);
-            sm.setLevelName(cfg.levelName());
+            SystemManager sm = new SystemManager(gameStatus, cfg.levelName());
             // For each system defined in this level
             for (SystemConfig sc : cfg.systems()) {
                 // Prepare empty port lists
